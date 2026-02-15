@@ -34,6 +34,6 @@
     "vite": "^7.3.1"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.74.0"
+    "@anthropic-ai/claude-code": "^2.1.42"
   }
 }

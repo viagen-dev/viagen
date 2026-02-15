@@ -24,7 +24,10 @@ export default defineConfig({
 Set the `ANTHROPIC_API_KEY` environment variable, then start your dev server. The plugin adds endpoints under `/via/*`:
 
 - `GET /via/health` — Returns env var configuration status
-- `GET /via/chat` — *(coming soon)* Chat with Claude Code to modify your app
+- `POST /via/chat` — Chat with Claude Code to build and modify your app (streams SSE)
+- `POST /via/chat/reset` — Reset the conversation
+
+Claude Code runs as a subprocess with full access to your project — it can read, write, and edit files, run commands, and search your codebase. Changes trigger Vite HMR automatically.
 
 ## Development
 
