@@ -16,6 +16,8 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
+export const DEFAULT_SYSTEM_PROMPT = `You are embedded in a Vite dev server as the "viagen" plugin. Your job is to help build and modify the app. Files you edit will trigger Vite HMR automatically. You can read .viagen/server.log to check recent Vite dev server output (compile errors, HMR updates, warnings). Be concise.`;
+
 export function findClaudeBin(): string {
   const _require = createRequire(import.meta.url);
   const pkgPath = _require.resolve("@anthropic-ai/claude-code/package.json");
@@ -30,6 +32,7 @@ export function registerChatRoutes(
     logBuffer: LogBuffer;
     model: string;
     claudeBin: string;
+    systemPrompt?: string;
   },
 ) {
   let sessionId: string | undefined;
@@ -97,7 +100,7 @@ export function registerChatRoutes(
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Connection", "keep-alive");
 
-    let systemPrompt = `You are embedded in a Vite dev server as the "viagen" plugin. Your job is to help build and modify the app running at ${opts.projectRoot}. Files you edit will trigger Vite HMR automatically. You can read .viagen/server.log to check recent Vite dev server output (compile errors, HMR updates, warnings). Be concise.`;
+    let systemPrompt = opts.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
 
     const recentErrors = opts.logBuffer.recentErrors();
     if (recentErrors.length > 0) {

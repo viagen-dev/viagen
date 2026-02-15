@@ -29,7 +29,11 @@ export interface ViagenOptions {
   overlay?: boolean;
   /** Inject the toggle button + chat panel into pages. Default: true */
   ui?: boolean;
+  /** Custom system prompt appended to Claude. Overrides the default. */
+  systemPrompt?: string;
 }
+
+export { DEFAULT_SYSTEM_PROMPT } from "./chat";
 
 export {
   deploySandbox,
@@ -132,6 +136,7 @@ export function viagen(options?: ViagenOptions): Plugin {
         logBuffer,
         model: opts.model,
         claudeBin,
+        systemPrompt: options?.systemPrompt,
       });
     },
   };

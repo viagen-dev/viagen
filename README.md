@@ -62,6 +62,30 @@ viagen({
   panelWidth: 420,           // chat panel width in px
   overlay: true,             // fix button on error overlay
   ui: true,                  // inject chat panel into pages
+  systemPrompt: '...',       // custom system prompt (see below)
+})
+```
+
+The default system prompt:
+
+```
+You are embedded in a Vite dev server as the "viagen" plugin. Your job is to
+help build and modify the app. Files you edit will trigger Vite HMR
+automatically. You can read .viagen/server.log to check recent Vite dev server
+output (compile errors, HMR updates, warnings). Be concise.
+```
+
+Recent build errors are automatically appended to give Claude context about what went wrong. To customize the prompt, you can replace it entirely or extend the default:
+
+```ts
+import { viagen, DEFAULT_SYSTEM_PROMPT } from 'viagen'
+
+viagen({
+  // Replace entirely
+  systemPrompt: 'You are a React expert. Only use TypeScript.',
+
+  // Or extend the default
+  systemPrompt: DEFAULT_SYSTEM_PROMPT + '\nAlways use Tailwind for styling.',
 })
 ```
 
