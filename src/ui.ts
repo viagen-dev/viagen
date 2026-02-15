@@ -29,6 +29,33 @@ export function buildUiHtml(): string {
       font-family: ui-monospace, monospace;
       color: #a1a1aa;
       letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #3f3f46;
+    }
+    .status-dot.ok { background: #22c55e; }
+    .status-dot.error { background: #ef4444; }
+    .setup-banner {
+      padding: 12px 16px;
+      border-bottom: 1px solid #27272a;
+      background: #18181b;
+      font-size: 12px;
+      color: #a1a1aa;
+      line-height: 1.6;
+      flex-shrink: 0;
+      display: none;
+    }
+    .setup-banner code {
+      font-family: ui-monospace, monospace;
+      color: #d4d4d8;
+      font-size: 11px;
     }
     .btn {
       padding: 5px 10px;
@@ -136,9 +163,10 @@ export function buildUiHtml(): string {
 </head>
 <body>
   <div class="header">
-    <h1>viagen</h1>
+    <h1><span class="status-dot" id="status-dot"></span> viagen</h1>
     <button class="btn" id="reset-btn">Reset</button>
   </div>
+  <div class="setup-banner" id="setup-banner"></div>
   <div class="messages" id="messages"></div>
   <div class="input-area">
     <input type="text" id="input" placeholder="What do you want to build?" autofocus />
@@ -343,6 +371,27 @@ export function buildUiHtml(): string {
         send();
       }
     });
+
+    // Health check — show status and disable input if not configured
+    fetch('/via/health')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var dot = document.getElementById('status-dot');
+        var banner = document.getElementById('setup-banner');
+        if (data.configured) {
+          dot.className = 'status-dot ok';
+        } else {
+          dot.className = 'status-dot error';
+          inputEl.disabled = true;
+          sendBtn.disabled = true;
+          inputEl.placeholder = 'API key not configured';
+          banner.style.display = 'block';
+          banner.innerHTML = 'Set <code>ANTHROPIC_API_KEY</code> in your <code>.env</code> file and restart the dev server.<br><a href="/via/docs" target="_top" style="color:#71717a;text-decoration:underline;text-underline-offset:2px;">Setup docs</a>';
+        }
+      })
+      .catch(function() {
+        document.getElementById('status-dot').className = 'status-dot error';
+      });
 
     loadHistory();
   </script>

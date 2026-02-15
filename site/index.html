@@ -142,6 +142,14 @@ export default defineConfig({
       <h2>Features</h2>
       <div class="features">
         <div class="feature">
+          <h3>Sandbox</h3>
+          <p>Deploy to a remote Vercel Sandbox with one command. Token-based auth on all endpoints.</p>
+        </div>
+        <div class="feature">
+          <h3>Zero config</h3>
+          <p>One plugin, one env var. No framework dependency — works with any Vite project.</p>
+        </div>
+        <div class="feature">
           <h3>Chat panel</h3>
           <p>Built-in chat UI injected into your page. Ask Claude to build features, fix bugs, refactor code.</p>
         </div>
@@ -157,15 +165,22 @@ export default defineConfig({
           <h3>Streaming SSE</h3>
           <p>Real-time streamed responses. Watch Claude think and work through your codebase.</p>
         </div>
-        <div class="feature">
-          <h3>Sandbox</h3>
-          <p>Deploy to a remote Vercel Sandbox with one command. Token-based auth on all endpoints.</p>
-        </div>
-        <div class="feature">
-          <h3>Zero config</h3>
-          <p>One plugin, one env var. No framework dependency — works with any Vite project.</p>
-        </div>
       </div>
+    </section>
+
+    <section>
+      <h2>Sandbox</h2>
+      <p style="font-size:13px;color:#a1a1aa;line-height:1.6;margin-bottom:12px;">Deploy your dev server to a remote Vercel Sandbox — an isolated microVM with full tool access and token-based auth on every endpoint.</p>
+      <pre><code># Prerequisites: ANTHROPIC_API_KEY in .env
+# + Vercel auth (pick one):
+vercel link && vercel env pull
+# or set VERCEL_TOKEN, VERCEL_TEAM_ID, VERCEL_PROJECT_ID
+
+# Deploy
+npx viagen sandbox
+
+# Stop
+npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
     </section>
 
     <section>

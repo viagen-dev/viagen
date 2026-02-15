@@ -115,16 +115,27 @@ export function buildClientScript(opts: {
   panel.appendChild(iframe);
   document.body.appendChild(panel);
 
+  var dotColor = '#3f3f46';
+  function dotHtml() { return '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:' + dotColor + ';vertical-align:middle;margin-right:4px;"></span>'; }
+
   var toggle = document.createElement('button');
   toggle.id = 'viagen-toggle';
-  toggle.textContent = 'via';
+  toggle.innerHTML = dotHtml() + 'via';
   toggle.style.cssText = 'position:fixed;${togglePos}z-index:99998;padding:8px 14px;background:#18181b;color:#a1a1aa;border:1px solid #3f3f46;border-radius:20px;font-size:12px;font-weight:600;font-family:ui-monospace,monospace;cursor:pointer;letter-spacing:0.05em;transition:border-color 0.15s,color 0.15s,background 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
   toggle.onmouseenter = function() { toggle.style.borderColor = '#71717a'; toggle.style.color = '#e4e4e7'; };
   toggle.onmouseleave = function() { if (panel.style.display === 'none') { toggle.style.borderColor = '#3f3f46'; toggle.style.color = '#a1a1aa'; } };
 
+  fetch('/via/health').then(function(r) { return r.json(); }).then(function(data) {
+    dotColor = data.configured ? '#22c55e' : '#ef4444';
+    if (panel.style.display === 'none') toggle.innerHTML = dotHtml() + 'via';
+  }).catch(function() {
+    dotColor = '#ef4444';
+    if (panel.style.display === 'none') toggle.innerHTML = dotHtml() + 'via';
+  });
+
   function setPanelOpen(open) {
     panel.style.display = open ? 'block' : 'none';
-    toggle.textContent = open ? 'x' : 'via';
+    toggle.innerHTML = open ? 'x' : dotHtml() + 'via';
     toggle.style.${toggleSideKey} = open ? '${toggleOpenVal}' : '${toggleClosedVal}';
     toggle.style.borderColor = open ? '#71717a' : '#3f3f46';
     toggle.style.color = open ? '#e4e4e7' : '#a1a1aa';
