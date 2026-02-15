@@ -1,16 +1,14 @@
 {
   "name": "viagen",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Vite dev server plugin that exposes endpoints for chatting with Claude Code SDK",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
+  "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     }
   },
   "bin": {

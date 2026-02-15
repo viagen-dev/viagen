@@ -15,8 +15,9 @@ export function buildClientScript(opts: {
           : "bottom:16px;right:16px;";
   const panelSide = pos.includes("left") ? "left:0;" : "right:0;";
   const toggleSideKey = pos.includes("left") ? "left" : "right";
+  const toggleVerticalKey = pos.includes("top") ? "top" : "bottom";
   const toggleClosedVal = "16px";
-  const toggleOpenVal = `${pw + 16}px`;
+  const toggleOpenVal = `${pw + 14}px`;
 
   return /* js */ `
 (function() {
@@ -135,11 +136,12 @@ export function buildClientScript(opts: {
 
   function setPanelOpen(open) {
     panel.style.display = open ? 'block' : 'none';
-    toggle.innerHTML = open ? 'x' : dotHtml() + 'via';
+    toggle.innerHTML = open ? 'close' : dotHtml() + 'via';
     toggle.style.${toggleSideKey} = open ? '${toggleOpenVal}' : '${toggleClosedVal}';
+    toggle.style.${toggleVerticalKey} = open ? '${pos.includes("top") ? "16" : "11"}px' : '12px';
     toggle.style.borderColor = open ? '#71717a' : '#3f3f46';
-    toggle.style.color = open ? '#e4e4e7' : '#a1a1aa';
-    toggle.style.background = open ? '#3f3f46' : '#18181b';
+    toggle.style.color = open ? '#a1a1aa' : '#a1a1aa';
+    toggle.style.background = open ? '#18181b' : '#18181b';
     try { sessionStorage.setItem(PANEL_KEY, open ? '1' : ''); } catch(e) {}
   }
 
@@ -147,6 +149,10 @@ export function buildClientScript(opts: {
     setPanelOpen(panel.style.display === 'none');
   });
   document.body.appendChild(toggle);
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && panel.style.display !== 'none') setPanelOpen(false);
+  });
 
   try { if (sessionStorage.getItem(PANEL_KEY)) setPanelOpen(true); } catch(e) {}
 })();
