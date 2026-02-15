@@ -1,14 +1,33 @@
 {
   "name": "viagen",
-  "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
+  "description": "Vite dev server plugin that exposes endpoints for chatting with Claude Code SDK",
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "tsup",
+    "dev": "vite --config playground/vite.config.ts playground",
+    "preview": "vite preview --config playground/vite.config.ts playground",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "vite": ">=4"
   },
   "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsup": "^8.5.1",
     "typescript": "~5.9.3",
     "vite": "^7.3.1"
   }

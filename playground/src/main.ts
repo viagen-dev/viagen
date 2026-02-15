@@ -22,3 +22,19 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 `
 
 setupCounter(document.querySelector<HTMLButtonElement>('#counter')!)
+
+// Check viagen health
+fetch('/via/health')
+  .then((res) => res.json())
+  .then((data: { status: string; configured: boolean; missing?: string[] }) => {
+    const el = document.createElement('div')
+    el.className = 'card'
+
+    if (data.configured) {
+      el.innerHTML = `<p>viagen: <strong>${data.status}</strong></p>`
+    } else {
+      el.innerHTML = `<p>viagen: <strong>${data.status}</strong> — missing: ${data.missing?.join(', ')}</p>`
+    }
+
+    document.querySelector<HTMLDivElement>('#app')!.appendChild(el)
+  })

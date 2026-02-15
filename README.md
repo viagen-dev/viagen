@@ -1,18 +1,36 @@
 # Viagen (Vite Agent)
 
-A Vite dev server plugin that exposes an endpoint for chatting with Claude Code. Spin up any app in a sandbox, expose the port, and remotely chat with your app to make changes.
+A Vite plugin that exposes endpoints for chatting with Claude Code. Add it to any Vite app, spin up a sandbox, and remotely chat with your app to make changes.
 
-## Setup
+## Install
 
-Scaffolded with `npm create vite@latest` using the `vanilla-ts` template (Vite 7, TypeScript 5.9).
+```bash
+npm install viagen
+```
+
+## Usage
+
+Add the plugin to your `vite.config.ts`:
+
+```ts
+import { defineConfig } from 'vite'
+import { viagen } from 'viagen'
+
+export default defineConfig({
+  plugins: [viagen()],
+})
+```
+
+Set the `ANTHROPIC_API_KEY` environment variable, then start your dev server. The plugin adds endpoints under `/via/*`:
+
+- `GET /via/health` — Returns env var configuration status
+- `GET /via/chat` — *(coming soon)* Chat with Claude Code to modify your app
+
+## Development
 
 ```bash
 npm install
-npm run dev
+npm run dev        # Start the playground dev server
+npm run build      # Build the plugin with tsup
+npm run typecheck  # Run TypeScript type checking
 ```
-
-## Scripts
-
-- `npm run dev` — Start the Vite dev server
-- `npm run build` — Typecheck with `tsc` and build for production
-- `npm run preview` — Preview the production build
