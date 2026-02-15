@@ -402,6 +402,12 @@ async function setup() {
 
 // ─── sandbox command ─────────────────────────────────────────────
 
+function parseFlag(args: string[], flag: string): string | undefined {
+  const idx = args.indexOf(flag);
+  if (idx !== -1 && idx + 1 < args.length) return args[idx + 1];
+  return undefined;
+}
+
 async function sandbox(args: string[]) {
   const subcommand = args[0];
 
@@ -417,6 +423,8 @@ async function sandbox(args: string[]) {
     console.log("Sandbox stopped.");
     return;
   }
+
+  const branchOverride = parseFlag(args, "--branch") || parseFlag(args, "-b");
 
   // Default: deploy sandbox
   const cwd = process.cwd();
@@ -455,8 +463,18 @@ async function sandbox(args: string[]) {
   let deployGit: GitInfo | undefined;
   let overlayFiles: { path: string; content: Buffer }[] | undefined;
 
+  const branch = branchOverride || (gitInfo ? gitInfo.branch : "main");
+
   if (gitInfo && githubToken) {
-    if (gitInfo.isDirty) {
+    const makeGitInfo = (): GitInfo => ({
+      remoteUrl: gitInfo.remoteUrl,
+      branch,
+      userName: gitInfo.userName,
+      userEmail: gitInfo.userEmail,
+      token: githubToken,
+    });
+
+    if (gitInfo.isDirty && !branchOverride) {
       console.log("");
       console.log("Your working tree has uncommitted changes.");
       console.log("");
@@ -468,33 +486,15 @@ async function sandbox(args: string[]) {
       console.log("");
       const answer = await promptUser("Choose mode [1/2/3]: ");
       if (!answer || answer === "3") {
-        deployGit = {
-          remoteUrl: gitInfo.remoteUrl,
-          branch: gitInfo.branch,
-          userName: gitInfo.userName,
-          userEmail: gitInfo.userEmail,
-          token: githubToken,
-        };
+        deployGit = makeGitInfo();
         overlayFiles = collectFiles(cwd, cwd);
       } else if (answer === "1") {
-        deployGit = {
-          remoteUrl: gitInfo.remoteUrl,
-          branch: gitInfo.branch,
-          userName: gitInfo.userName,
-          userEmail: gitInfo.userEmail,
-          token: githubToken,
-        };
+        deployGit = makeGitInfo();
       } else {
         console.log("Note: Sandbox is ephemeral — changes can't be pushed.");
       }
     } else {
-      deployGit = {
-        remoteUrl: gitInfo.remoteUrl,
-        branch: gitInfo.branch,
-        userName: gitInfo.userName,
-        userEmail: gitInfo.userEmail,
-        token: githubToken,
-      };
+      deployGit = makeGitInfo();
     }
   } else if (gitInfo && !githubToken) {
     console.log(
@@ -551,10 +551,10 @@ function help() {
   console.log("  viagen <command>");
   console.log("");
   console.log("Commands:");
-  console.log("  setup              Set up .env with API keys and tokens");
-  console.log("  sandbox            Deploy your project to a Vercel Sandbox");
-  console.log("  sandbox stop <id>  Stop a running sandbox");
-  console.log("  help               Show this help message");
+  console.log("  setup                    Set up .env with API keys and tokens");
+  console.log("  sandbox [-b <branch>]    Deploy your project to a Vercel Sandbox");
+  console.log("  sandbox stop <id>        Stop a running sandbox");
+  console.log("  help                     Show this help message");
   console.log("");
   console.log("Getting started:");
   console.log("  1. npm install viagen");

@@ -126,6 +126,9 @@ export async function deploySandbox(
         opts.git.userEmail,
       ]);
 
+      // Ensure we're on the branch (not detached HEAD)
+      await sandbox.runCommand("git", ["checkout", opts.git.branch]);
+
       // Configure credential helper so Claude can push
       // Use global config + home dir so it works regardless of cwd
       await sandbox.runCommand("bash", [
