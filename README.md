@@ -36,6 +36,31 @@ viagen({
 
 All options are optional. Defaults shown above.
 
+## Sandbox
+
+Deploy your dev server to a remote Vercel Sandbox:
+
+```bash
+npx viagen sandbox
+```
+
+This creates an isolated microVM, uploads your project, installs dependencies, and starts the dev server. All endpoints are protected with token-based auth.
+
+**Prerequisites:** `ANTHROPIC_API_KEY` in `.env` + Vercel auth (`vercel link && vercel env pull` or set `VERCEL_TOKEN`, `VERCEL_TEAM_ID`, `VERCEL_PROJECT_ID`).
+
+```bash
+npx viagen sandbox stop <sandboxId>   # Stop a running sandbox
+```
+
+## Auth
+
+Set `VIAGEN_AUTH_TOKEN` in `.env` to protect all endpoints. When set:
+
+- Browser: visit `?token=<token>` to set a session cookie
+- API: use `Authorization: Bearer <token>` header
+
+Auth is automatic when deploying via `npx viagen sandbox`.
+
 ## Endpoints
 
 **`POST /via/chat`** — Send a message, get a streamed response.
@@ -72,6 +97,6 @@ You can also open the chat UI directly at `http://localhost:5173/via/ui`.
 
 ```bash
 npm install
-npm run dev        # Playground dev server
+npm run dev        # Dev server
 npm run build      # Build with tsup
 ```

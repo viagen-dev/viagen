@@ -1,10 +1,10 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { createRequire } from "node:module";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { loadEnv, type Plugin, type Logger } from "vite";
-import type { IncomingMessage } from "node:http";
-import { VIAGEN_UI_HTML } from "./ui";
+import { loadEnv, type Plugin } from "vite";
+import { LogBuffer, wrapLogger } from "./logger";
+import { registerHealthRoutes, type ViteError } from "./health";
+import { findClaudeBin, registerChatRoutes } from "./chat";
+import { buildClientScript } from "./overlay";
+import { buildUiHtml } from "./ui";
+import { createAuthMiddleware } from "./auth";
 
 export interface ViagenOptions {
   /** Toggle button placement. Default: 'bottom-right' */
@@ -19,239 +19,7 @@ export interface ViagenOptions {
   ui?: boolean;
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    let body = "";
-    req.on("data", (chunk: Buffer) => {
-      body += chunk.toString();
-    });
-    req.on("end", () => resolve(body));
-    req.on("error", reject);
-  });
-}
-
-interface LogEntry {
-  level: "info" | "warn" | "error";
-  text: string;
-  timestamp: number;
-}
-
-const MAX_LOG_LINES = 100;
-
-class LogBuffer {
-  private entries: LogEntry[] = [];
-  private logPath: string | undefined;
-
-  init(projectRoot: string) {
-    const dir = join(projectRoot, ".viagen");
-    mkdirSync(dir, { recursive: true });
-    this.logPath = join(dir, "server.log");
-    this.flush();
-  }
-
-  push(level: LogEntry["level"], text: string) {
-    this.entries.push({ level, text, timestamp: Date.now() });
-    if (this.entries.length > MAX_LOG_LINES) {
-      this.entries.shift();
-    }
-    this.flush();
-  }
-
-  recentErrors(): string[] {
-    return this.entries
-      .filter((e) => e.level === "error" || e.level === "warn")
-      .map((e) => `[${e.level.toUpperCase()}] ${e.text}`);
-  }
-
-  private flush() {
-    if (!this.logPath) return;
-    const content = this.entries
-      .map((e) => {
-        const ts = new Date(e.timestamp).toISOString();
-        return `[${ts}] [${e.level.toUpperCase()}] ${e.text}`;
-      })
-      .join("\n");
-    writeFileSync(this.logPath, content + "\n");
-  }
-}
-
-function wrapLogger(logger: Logger, buffer: LogBuffer): void {
-  const origInfo = logger.info.bind(logger);
-  const origWarn = logger.warn.bind(logger);
-  const origError = logger.error.bind(logger);
-
-  logger.info = (msg, opts) => {
-    buffer.push("info", msg);
-    origInfo(msg, opts);
-  };
-  logger.warn = (msg, opts) => {
-    buffer.push("warn", msg);
-    origWarn(msg, opts);
-  };
-  logger.error = (msg, opts) => {
-    buffer.push("error", msg);
-    origError(msg, opts);
-  };
-}
-
-interface ViteError {
-  message: string;
-  stack: string;
-  frame?: string;
-  plugin?: string;
-  loc?: { file: string; line: number; column: number };
-}
-
-function buildClientScript(opts: {
-  position: string;
-  panelWidth: number;
-  overlay: boolean;
-}): string {
-  const pos = opts.position;
-  const pw = opts.panelWidth;
-  const togglePos =
-    pos === "bottom-left"
-      ? "bottom:16px;left:16px;"
-      : pos === "top-right"
-        ? "top:16px;right:16px;"
-        : pos === "top-left"
-          ? "top:16px;left:16px;"
-          : "bottom:16px;right:16px;";
-  const panelSide = pos.includes("left") ? "left:0;" : "right:0;";
-  const toggleSideKey = pos.includes("left") ? "left" : "right";
-  const toggleClosedVal = "16px";
-  const toggleOpenVal = `${pw + 16}px`;
-
-  return /* js */ `
-(function() {
-  var OVERLAY_ENABLED = ${opts.overlay};
-
-  /* ---- Error overlay: inject Fix button into shadow DOM ---- */
-  if (OVERLAY_ENABLED) {
-    var observer = new MutationObserver(function(mutations) {
-      for (var i = 0; i < mutations.length; i++) {
-        var added = mutations[i].addedNodes;
-        for (var j = 0; j < added.length; j++) {
-          if (added[j].nodeName === 'VITE-ERROR-OVERLAY') injectFixButton(added[j]);
-        }
-      }
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-  }
-
-  function injectFixButton(overlay) {
-    if (!overlay.shadowRoot) return;
-    setTimeout(function() {
-      var root = overlay.shadowRoot;
-      if (root.getElementById('viagen-fix-btn')) return;
-      var win = root.querySelector('.window') || root.firstElementChild;
-      if (!win) return;
-
-      var style = document.createElement('style');
-      style.textContent = [
-        '.stack { display: none; }',
-        '.tip { display: none; }',
-        '.frame { max-height: 120px; overflow: hidden; font-size: 12px; }',
-        '.window { max-width: 600px; padding: 20px; }',
-        '.window.viagen-fixing .message { opacity: 0.4; }',
-        '.window.viagen-fixing .file { opacity: 0.4; }',
-        '.window.viagen-fixing .frame { opacity: 0.4; }',
-        '#viagen-fixing-status { display: none; padding: 16px; text-align: center; font-family: system-ui, sans-serif; }',
-        '#viagen-fixing-status .label { font-size: 15px; font-weight: 600; color: #e4e4e7; }',
-        '#viagen-fixing-status .sub { font-size: 12px; color: #71717a; margin-top: 4px; }',
-        '#viagen-fixing-status .dot { display: inline-block; animation: viagen-pulse 1.5s ease-in-out infinite; }',
-        '.window.viagen-fixing #viagen-fixing-status { display: block; }',
-        '.window.viagen-fixing #viagen-fix-btn { display: none; }',
-        '@keyframes viagen-pulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }',
-      ].join('\\n');
-      root.appendChild(style);
-
-      var status = document.createElement('div');
-      status.id = 'viagen-fixing-status';
-      status.innerHTML = '<div class="label"><span class="dot">&#9679;</span> Fixing...</div><div class="sub">Claude is working on it. Check the chat panel.</div>';
-      win.appendChild(status);
-
-      var btn = document.createElement('button');
-      btn.id = 'viagen-fix-btn';
-      btn.textContent = 'Fix This Error';
-      btn.style.cssText = 'display:block;width:100%;margin-top:12px;padding:10px 20px;background:#3f3f46;color:#e4e4e7;border:1px solid #52525b;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:system-ui,sans-serif;transition:background 0.15s;';
-      btn.onmouseenter = function() { if (!btn.disabled) btn.style.background = '#52525b'; };
-      btn.onmouseleave = function() { if (!btn.disabled) btn.style.background = '#3f3f46'; };
-      btn.addEventListener('click', function() { fixError(win); });
-      win.appendChild(btn);
-    }, 50);
-  }
-
-  async function fixError(win) {
-    win.classList.add('viagen-fixing');
-    try {
-      var errorRes = await fetch('/via/error');
-      var errorData = await errorRes.json();
-      if (!errorData.error) { win.classList.remove('viagen-fixing'); return; }
-      var e = errorData.error;
-      var prompt = 'Fix this Vite build error in ' +
-        (e.loc ? e.loc.file + ':' + e.loc.line : 'unknown file') +
-        ':\\n\\n' + e.message +
-        (e.frame ? '\\n\\nCode frame:\\n' + e.frame : '');
-      var p = document.getElementById('viagen-panel');
-      if (p && p.style.display === 'none') {
-        var t = document.getElementById('viagen-toggle');
-        if (t) t.click();
-      }
-      var f = p && p.querySelector('iframe');
-      if (f && f.contentWindow) {
-        f.contentWindow.postMessage({ type: 'viagen:send', message: prompt }, '*');
-      }
-    } catch(err) {
-      console.error('[viagen] Fix error failed:', err);
-      win.classList.remove('viagen-fixing');
-    }
-  }
-
-  /* ---- Floating toggle + iframe panel ---- */
-  var PANEL_KEY = 'viagen_panel_open';
-  var panel = document.createElement('div');
-  panel.id = 'viagen-panel';
-  panel.style.cssText = 'position:fixed;top:0;${panelSide}bottom:0;width:${pw}px;z-index:99997;display:none;border-left:1px solid #27272a;box-shadow:-4px 0 24px rgba(0,0,0,0.5);';
-  var iframe = document.createElement('iframe');
-  iframe.src = '/via/ui';
-  iframe.style.cssText = 'width:100%;height:100%;border:none;background:#09090b;';
-  panel.appendChild(iframe);
-  document.body.appendChild(panel);
-
-  var toggle = document.createElement('button');
-  toggle.id = 'viagen-toggle';
-  toggle.textContent = 'via';
-  toggle.style.cssText = 'position:fixed;${togglePos}z-index:99998;padding:8px 14px;background:#18181b;color:#a1a1aa;border:1px solid #3f3f46;border-radius:20px;font-size:12px;font-weight:600;font-family:ui-monospace,monospace;cursor:pointer;letter-spacing:0.05em;transition:border-color 0.15s,color 0.15s,background 0.15s;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
-  toggle.onmouseenter = function() { toggle.style.borderColor = '#71717a'; toggle.style.color = '#e4e4e7'; };
-  toggle.onmouseleave = function() { if (panel.style.display === 'none') { toggle.style.borderColor = '#3f3f46'; toggle.style.color = '#a1a1aa'; } };
-
-  function setPanelOpen(open) {
-    panel.style.display = open ? 'block' : 'none';
-    toggle.textContent = open ? 'x' : 'via';
-    toggle.style.${toggleSideKey} = open ? '${toggleOpenVal}' : '${toggleClosedVal}';
-    toggle.style.borderColor = open ? '#71717a' : '#3f3f46';
-    toggle.style.color = open ? '#e4e4e7' : '#a1a1aa';
-    toggle.style.background = open ? '#3f3f46' : '#18181b';
-    try { sessionStorage.setItem(PANEL_KEY, open ? '1' : ''); } catch(e) {}
-  }
-
-  toggle.addEventListener('click', function() {
-    setPanelOpen(panel.style.display === 'none');
-  });
-  document.body.appendChild(toggle);
-
-  try { if (sessionStorage.getItem(PANEL_KEY)) setPanelOpen(true); } catch(e) {}
-})();
-`;
-}
-
-function findClaudeBin(): string {
-  // Vite always runs plugins as ESM, so import.meta.url is available
-  const _require = createRequire(import.meta.url);
-  const pkgPath = _require.resolve("@anthropic-ai/claude-code/package.json");
-  return pkgPath.replace("package.json", "cli.js");
-}
+export { deploySandbox } from "./sandbox";
 
 export function viagen(options?: ViagenOptions): Plugin {
   const opts = {
@@ -264,7 +32,6 @@ export function viagen(options?: ViagenOptions): Plugin {
 
   let env: Record<string, string>;
   let projectRoot: string;
-  let sessionId: string | undefined;
   let claudeBin: string;
   let lastError: ViteError | null = null;
   const logBuffer = new LogBuffer();
@@ -315,179 +82,30 @@ export function viagen(options?: ViagenOptions): Plugin {
         };
       }
 
+      // Auth middleware — only when VIAGEN_AUTH_TOKEN is set
+      const authToken = env["VIAGEN_AUTH_TOKEN"];
+      if (authToken) {
+        server.middlewares.use(createAuthMiddleware(authToken));
+      }
+
+      // Chat UI page
       server.middlewares.use("/via/ui", (_req, res) => {
         res.setHeader("Content-Type", "text/html");
-        res.end(VIAGEN_UI_HTML);
+        res.end(buildUiHtml());
       });
 
-      server.middlewares.use("/via/error", (_req, res) => {
-        res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ error: lastError }));
+      // Health + error routes
+      registerHealthRoutes(server, env, {
+        get: () => lastError,
       });
 
-      server.middlewares.use("/via/health", (_req, res) => {
-        const required = ["ANTHROPIC_API_KEY"];
-        const missing = required.filter((key) => !env[key]);
-
-        res.setHeader("Content-Type", "application/json");
-
-        if (missing.length === 0) {
-          res.end(JSON.stringify({ status: "ok", configured: true }));
-        } else {
-          res.end(
-            JSON.stringify({ status: "error", configured: false, missing }),
-          );
-        }
-      });
-
-      server.middlewares.use("/via/chat/reset", (_req, res) => {
-        sessionId = undefined;
-        res.setHeader("Content-Type", "application/json");
-        res.end(JSON.stringify({ status: "ok" }));
-      });
-
-      server.middlewares.use("/via/chat", async (req, res) => {
-        if (req.method !== "POST") {
-          res.statusCode = 405;
-          res.end(JSON.stringify({ error: "Method not allowed" }));
-          return;
-        }
-
-        if (!env["ANTHROPIC_API_KEY"]) {
-          res.statusCode = 500;
-          res.end(
-            JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }),
-          );
-          return;
-        }
-
-        let message: string;
-        try {
-          const body = JSON.parse(await readBody(req));
-          message = body.message;
-        } catch {
-          res.statusCode = 400;
-          res.end(JSON.stringify({ error: "Invalid JSON body" }));
-          return;
-        }
-
-        if (!message) {
-          res.statusCode = 400;
-          res.end(JSON.stringify({ error: 'Missing "message" field' }));
-          return;
-        }
-
-        res.setHeader("Content-Type", "text/event-stream");
-        res.setHeader("Cache-Control", "no-cache");
-        res.setHeader("Connection", "keep-alive");
-
-        let systemPrompt = `You are embedded in a Vite dev server as the "viagen" plugin. Your job is to help build and modify the app running at ${projectRoot}. Files you edit will trigger Vite HMR automatically. You can read .viagen/server.log to check recent Vite dev server output (compile errors, HMR updates, warnings). Be concise.`;
-
-        const recentErrors = logBuffer.recentErrors();
-        if (recentErrors.length > 0) {
-          systemPrompt += `\n\nRecent Vite dev server errors/warnings:\n${recentErrors.join("\n")}`;
-        }
-
-        const args = [
-          claudeBin,
-          "--print",
-          "--verbose",
-          "--output-format",
-          "stream-json",
-          "--dangerously-skip-permissions",
-          "--append-system-prompt",
-          systemPrompt,
-          "--model",
-          opts.model,
-        ];
-
-        if (sessionId) {
-          args.push("--resume", sessionId);
-        }
-
-        args.push(message);
-
-        const child: ChildProcess = spawn("node", args, {
-          cwd: projectRoot,
-          env: {
-            ...process.env,
-            ANTHROPIC_API_KEY: env["ANTHROPIC_API_KEY"],
-            CLAUDECODE: "",
-          },
-          stdio: ["ignore", "pipe", "pipe"],
-        });
-
-        let buffer = "";
-
-        child.stdout?.on("data", (chunk: Buffer) => {
-          buffer += chunk.toString();
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-
-            try {
-              const msg = JSON.parse(line);
-
-              if (msg.type === "system" && msg.session_id) {
-                sessionId = msg.session_id;
-              }
-
-              if (msg.type === "assistant" && msg.message?.content) {
-                for (const block of msg.message.content) {
-                  if (block.type === "text" && block.text) {
-                    res.write(
-                      `data: ${JSON.stringify({ type: "text", text: block.text })}\n\n`,
-                    );
-                  }
-                  if (block.type === "tool_use") {
-                    res.write(
-                      `data: ${JSON.stringify({ type: "tool_use", name: block.name, input: block.input })}\n\n`,
-                    );
-                  }
-                }
-              }
-
-              if (msg.type === "result") {
-                if (msg.result) {
-                  res.write(
-                    `data: ${JSON.stringify({ type: "text", text: msg.result })}\n\n`,
-                  );
-                }
-                res.write("event: done\ndata: {}\n\n");
-              }
-            } catch {
-              // skip unparseable lines
-            }
-          }
-        });
-
-        child.stderr?.on("data", (chunk: Buffer) => {
-          const text = chunk.toString().trim();
-          if (text) {
-            res.write(`data: ${JSON.stringify({ type: "error", text })}\n\n`);
-          }
-        });
-
-        child.on("close", () => {
-          if (!res.writableEnded) {
-            res.write("event: done\ndata: {}\n\n");
-            res.end();
-          }
-        });
-
-        child.on("error", (err) => {
-          res.write(
-            `data: ${JSON.stringify({ type: "error", text: err.message })}\n\n`,
-          );
-          res.write("event: done\ndata: {}\n\n");
-          res.end();
-        });
-
-        req.on("close", () => {
-          child.kill();
-        });
+      // Chat routes
+      registerChatRoutes(server, {
+        env,
+        projectRoot,
+        logBuffer,
+        model: opts.model,
+        claudeBin,
       });
     },
   };

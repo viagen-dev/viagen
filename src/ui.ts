@@ -1,4 +1,5 @@
-export const VIAGEN_UI_HTML = `<!DOCTYPE html>
+export function buildUiHtml(): string {
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -347,3 +348,4 @@ export const VIAGEN_UI_HTML = `<!DOCTYPE html>
   </script>
 </body>
 </html>`;
+}
