@@ -31,7 +31,10 @@ export interface ViagenOptions {
   ui?: boolean;
 }
 
-export { deploySandbox } from "./sandbox";
+export {
+  deploySandbox,
+  type GitInfo,
+} from "./sandbox";
 
 export function viagen(options?: ViagenOptions): Plugin {
   const opts = {

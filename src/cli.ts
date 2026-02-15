@@ -1,7 +1,9 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { execSync } from "node:child_process";
-import { deploySandbox, stopSandbox } from "./sandbox";
+import { createInterface } from "node:readline";
+import { deploySandbox, stopSandbox, collectFiles } from "./sandbox";
+import type { GitInfo } from "./sandbox";
 
 function loadDotenv(dir: string): Record<string, string> {
   const envPath = join(dir, ".env");
@@ -34,6 +36,68 @@ function openBrowser(url: string) {
   } catch {
     // Silent fail — user can open manually
   }
+}
+
+interface LocalGitInfo {
+  remoteUrl: string;
+  branch: string;
+  userName: string;
+  userEmail: string;
+  isDirty: boolean;
+}
+
+function git(cwd: string, args: string): string {
+  return execSync(`git ${args}`, { cwd, stdio: "pipe", encoding: "utf-8" }).trim();
+}
+
+function sshToHttps(url: string): string {
+  if (url.startsWith("https://")) return url;
+  if (url.startsWith("http://")) return url.replace(/^http:\/\//, "https://");
+
+  // git@host:user/repo.git
+  const shorthand = url.match(/^[\w.-]+@([\w.-]+):([\w./_-]+)$/);
+  if (shorthand) return `https://${shorthand[1]}/${shorthand[2]}`;
+
+  // ssh://git@host/user/repo.git
+  const sshUrl = url.match(/^ssh:\/\/[\w.-]+@([\w.-]+)\/([\w./_-]+)$/);
+  if (sshUrl) return `https://${sshUrl[1]}/${sshUrl[2]}`;
+
+  return url;
+}
+
+function getGitInfo(cwd: string): LocalGitInfo | null {
+  try {
+    git(cwd, "rev-parse --is-inside-work-tree");
+  } catch {
+    return null;
+  }
+
+  try {
+    const remoteUrlRaw = git(cwd, "remote get-url origin");
+    const branch = git(cwd, "branch --show-current");
+    const userName = git(cwd, "config user.name");
+    const userEmail = git(cwd, "config user.email");
+    const status = git(cwd, "status --porcelain");
+
+    const remoteUrl = sshToHttps(remoteUrlRaw);
+    if (!remoteUrl || !branch) return null;
+
+    return { remoteUrl, branch, userName, userEmail, isDirty: status.length > 0 };
+  } catch {
+    return null;
+  }
+}
+
+function promptUser(question: string): Promise<string> {
+  if (!process.stdin.isTTY) return Promise.resolve("");
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise((resolve) => {
+    rl.question(question, (answer) => {
+      rl.close();
+      resolve(answer.trim().toLowerCase());
+    });
+  });
 }
 
 async function main() {
@@ -88,14 +152,74 @@ async function main() {
       process.exit(1);
     }
 
+    // Git detection
+    const githubToken = env["GITHUB_TOKEN"];
+    const gitInfo = getGitInfo(cwd);
+
+    let deployGit: GitInfo | undefined;
+    let overlayFiles: { path: string; content: Buffer }[] | undefined;
+
+    if (gitInfo && githubToken) {
+      if (gitInfo.isDirty) {
+        console.log("");
+        console.log("Your working tree has uncommitted changes.");
+        console.log("");
+        console.log("  1) Clone from remote (clean) — full git, can push");
+        console.log("  2) Upload local files — includes changes, no git");
+        console.log("  3) Clone + overlay — git history + your local changes (default)");
+        console.log("");
+        let answer = await promptUser("Choose mode [1/2/3]: ");
+        if (!answer || answer === "3") {
+          deployGit = {
+            remoteUrl: gitInfo.remoteUrl,
+            branch: gitInfo.branch,
+            userName: gitInfo.userName,
+            userEmail: gitInfo.userEmail,
+            token: githubToken,
+          };
+          overlayFiles = collectFiles(cwd, cwd);
+        } else if (answer === "1") {
+          deployGit = {
+            remoteUrl: gitInfo.remoteUrl,
+            branch: gitInfo.branch,
+            userName: gitInfo.userName,
+            userEmail: gitInfo.userEmail,
+            token: githubToken,
+          };
+        } else {
+          console.log("Note: Sandbox is ephemeral — changes can't be pushed.");
+        }
+      } else {
+        // Clean tree — default to git clone
+        deployGit = {
+          remoteUrl: gitInfo.remoteUrl,
+          branch: gitInfo.branch,
+          userName: gitInfo.userName,
+          userEmail: gitInfo.userEmail,
+          token: githubToken,
+        };
+      }
+    } else if (gitInfo && !githubToken) {
+      console.log("Note: No GITHUB_TOKEN set — changes from the sandbox can't be saved.");
+    } else {
+      console.log("Note: Not a git repo — sandbox will use file upload (ephemeral).");
+    }
+
+    console.log("");
     console.log("Creating sandbox...");
-    const result = await deploySandbox({ cwd, apiKey });
+    if (deployGit) {
+      console.log(`  Repo:   ${deployGit.remoteUrl}`);
+      console.log(`  Branch: ${deployGit.branch}`);
+    }
+
+    const result = await deploySandbox({ cwd, apiKey, git: deployGit, overlayFiles });
 
     console.log("");
     console.log("Sandbox deployed!");
     console.log("");
     console.log(`  URL:        ${result.url}`);
     console.log(`  Sandbox ID: ${result.sandboxId}`);
+    console.log(`  Mode:       ${result.mode === "git" ? "git clone (can push)" : "file upload (ephemeral)"}`);
     console.log(`  Token:      ${result.token}`);
     console.log("");
     console.log(`Stop with: npx viagen sandbox stop ${result.sandboxId}`);

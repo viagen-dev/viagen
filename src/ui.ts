@@ -164,7 +164,10 @@ export function buildUiHtml(): string {
 <body>
   <div class="header">
     <h1><span class="status-dot" id="status-dot"></span> viagen</h1>
-    <button class="btn" id="reset-btn">Reset</button>
+    <div style="display:flex;gap:4px;">
+      <button class="btn" id="publish-btn" style="display:none">Publish</button>
+      <button class="btn" id="reset-btn">Reset</button>
+    </div>
   </div>
   <div class="setup-banner" id="setup-banner"></div>
   <div class="messages" id="messages"></div>
@@ -178,6 +181,7 @@ export function buildUiHtml(): string {
     var inputEl = document.getElementById('input');
     var sendBtn = document.getElementById('send-btn');
     var resetBtn = document.getElementById('reset-btn');
+    var publishBtn = document.getElementById('publish-btn');
     var currentTextSpan = null;
     var isStreaming = false;
     var chatLog = []; // Array of { type: 'user'|'text'|'tool'|'error', content: string }
@@ -363,6 +367,11 @@ export function buildUiHtml(): string {
       currentTextSpan = null;
       inputEl.focus();
     });
+    publishBtn.addEventListener('click', function () {
+      if (isStreaming) return;
+      inputEl.value = 'Commit all changes and push to the remote repository';
+      send();
+    });
 
     // Accept messages from parent (e.g. "Fix This Error" button)
     window.addEventListener('message', function(ev) {
@@ -380,6 +389,7 @@ export function buildUiHtml(): string {
         var banner = document.getElementById('setup-banner');
         if (data.configured) {
           dot.className = 'status-dot ok';
+          if (data.git) publishBtn.style.display = '';
         } else {
           dot.className = 'status-dot error';
           inputEl.disabled = true;

@@ -24,11 +24,13 @@ export function registerHealthRoutes(
 
     res.setHeader("Content-Type", "application/json");
 
+    const git = !!env["GITHUB_TOKEN"];
+
     if (missing.length === 0) {
-      res.end(JSON.stringify({ status: "ok", configured: true }));
+      res.end(JSON.stringify({ status: "ok", configured: true, git }));
     } else {
       res.end(
-        JSON.stringify({ status: "error", configured: false, missing }),
+        JSON.stringify({ status: "error", configured: false, missing, git }),
       );
     }
   });

@@ -3,11 +3,28 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { Sandbox } from "@vercel/sandbox";
 
+export interface GitInfo {
+  /** HTTPS remote URL (transformed from SSH if needed). */
+  remoteUrl: string;
+  /** Branch to check out. */
+  branch: string;
+  /** Git user name for commits. */
+  userName: string;
+  /** Git user email for commits. */
+  userEmail: string;
+  /** GitHub PAT (or other host token) for auth. */
+  token: string;
+}
+
 interface DeploySandboxOptions {
-  /** Project directory to upload. */
+  /** Project directory to upload (used in file-upload mode). */
   cwd: string;
   /** Anthropic API key to inject into sandbox .env. */
   apiKey: string;
+  /** If provided, clone the repo instead of uploading files. */
+  git?: GitInfo;
+  /** Dirty files to overlay on top of a git clone. */
+  overlayFiles?: { path: string; content: Buffer }[];
 }
 
 interface DeploySandboxResult {
@@ -17,6 +34,8 @@ interface DeploySandboxResult {
   token: string;
   /** Sandbox ID for later management. */
   sandboxId: string;
+  /** Deployment mode used. */
+  mode: "git" | "upload";
 }
 
 const SKIP_DIRS = new Set([
@@ -30,7 +49,7 @@ const SKIP_DIRS = new Set([
 
 const SKIP_FILES = new Set([".env", ".env.local"]);
 
-function collectFiles(
+export function collectFiles(
   dir: string,
   base: string,
 ): { path: string; content: Buffer }[] {
@@ -54,34 +73,91 @@ function collectFiles(
   return files;
 }
 
+function extractHost(httpsUrl: string): string {
+  try {
+    return new URL(httpsUrl).host;
+  } catch {
+    return "github.com";
+  }
+}
+
 export async function deploySandbox(
   opts: DeploySandboxOptions,
 ): Promise<DeploySandboxResult> {
   const token = randomUUID();
+  const useGit = !!opts.git;
 
-  // Create sandbox with Node.js runtime and expose Vite's default port
+  // Create sandbox — with git source or bare
   const sandbox = await Sandbox.create({
     runtime: "node22",
     ports: [5173],
+    ...(opts.git
+      ? {
+          source: {
+            type: "git" as const,
+            url: opts.git.remoteUrl,
+            username: "x-access-token",
+            password: opts.git.token,
+            revision: opts.git.branch,
+          },
+        }
+      : {}),
   });
 
   try {
-    // Upload project files
-    const files = collectFiles(opts.cwd, opts.cwd);
-    if (files.length > 0) {
-      await sandbox.writeFiles(files);
+    if (useGit && opts.git) {
+      // Configure git identity for commits
+      await sandbox.runCommand("git", [
+        "config",
+        "user.name",
+        opts.git.userName,
+      ]);
+      await sandbox.runCommand("git", [
+        "config",
+        "user.email",
+        opts.git.userEmail,
+      ]);
+
+      // Configure credential helper so Claude can push
+      const credentialFile = "/vercel/sandbox/.git-credentials";
+      await sandbox.writeFiles([
+        {
+          path: ".git-credentials",
+          content: Buffer.from(
+            `https://x-access-token:${opts.git.token}@${extractHost(opts.git.remoteUrl)}\n`,
+          ),
+        },
+      ]);
+      await sandbox.runCommand("git", [
+        "config",
+        "credential.helper",
+        `store --file=${credentialFile}`,
+      ]);
+
+      // Overlay dirty files if provided
+      if (opts.overlayFiles && opts.overlayFiles.length > 0) {
+        await sandbox.writeFiles(opts.overlayFiles);
+      }
+    } else {
+      // File upload mode
+      const files = collectFiles(opts.cwd, opts.cwd);
+      if (files.length > 0) {
+        await sandbox.writeFiles(files);
+      }
     }
 
     // Write .env with secrets
+    const envLines = [
+      `ANTHROPIC_API_KEY=${opts.apiKey}`,
+      `VIAGEN_AUTH_TOKEN=${token}`,
+    ];
+    if (opts.git) {
+      envLines.push(`GITHUB_TOKEN=${opts.git.token}`);
+    }
     await sandbox.writeFiles([
       {
         path: ".env",
-        content: Buffer.from(
-          [
-            `ANTHROPIC_API_KEY=${opts.apiKey}`,
-            `VIAGEN_AUTH_TOKEN=${token}`,
-          ].join("\n"),
-        ),
+        content: Buffer.from(envLines.join("\n")),
       },
     ]);
 
@@ -89,7 +165,9 @@ export async function deploySandbox(
     const install = await sandbox.runCommand("npm", ["install"]);
     if (install.exitCode !== 0) {
       const stderr = await install.stderr();
-      throw new Error(`npm install failed (exit ${install.exitCode}): ${stderr}`);
+      throw new Error(
+        `npm install failed (exit ${install.exitCode}): ${stderr}`,
+      );
     }
 
     // Start dev server (detached so it runs in background)
@@ -106,6 +184,7 @@ export async function deploySandbox(
       url,
       token,
       sandboxId: sandbox.sandboxId,
+      mode: useGit ? "git" : "upload",
     };
   } catch (err) {
     // Clean up on failure
