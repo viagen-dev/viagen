@@ -41,7 +41,8 @@
   },
   "dependencies": {
     "@anthropic-ai/claude-code": "^2.1.42",
-    "@vercel/sandbox": "^1"
+    "@vercel/sandbox": "^1",
+    "lucide-react": "^0.564.0"
   },
   "license": "MIT",
   "repository": {

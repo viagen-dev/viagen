@@ -9,6 +9,26 @@
         />
         <title>viagen — Claude Code in your Vite dev server</title>
         <style>
+            :root {
+                --bg: #09090b;
+                --bg-secondary: #18181b;
+                --border: #27272a;
+                --border-hover: #3f3f46;
+                --text: #e4e4e7;
+                --text-muted: #a1a1aa;
+                --text-dim: #71717a;
+                --code-text: #d4d4d8;
+            }
+            [data-theme='light'] {
+                --bg: #ffffff;
+                --bg-secondary: #f4f4f5;
+                --border: #e4e4e7;
+                --border-hover: #d4d4d8;
+                --text: #18181b;
+                --text-muted: #52525b;
+                --text-dim: #71717a;
+                --code-text: #3f3f46;
+            }
             * {
                 margin: 0;
                 padding: 0;
@@ -19,42 +39,75 @@
                     system-ui,
                     -apple-system,
                     sans-serif;
-                background: #09090b;
-                color: #e4e4e7;
+                background: var(--bg);
+                color: var(--text);
                 min-height: 100vh;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
+                transition: background-color 0.2s, color 0.2s;
             }
             a {
-                color: #a1a1aa;
+                color: var(--text-muted);
                 text-decoration: none;
                 transition: color 0.15s;
             }
             a:hover {
-                color: #e4e4e7;
+                color: var(--text);
             }
             .container {
                 max-width: 640px;
                 width: 100%;
                 padding: 80px 24px 48px;
+                position: relative;
             }
             h1 {
                 font-family: ui-monospace, monospace;
                 font-size: 32px;
                 font-weight: 700;
                 letter-spacing: -0.02em;
-                margin-bottom: 12px;
+                margin-bottom: 4px;
+            }
+            .etymology {
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                color: var(--text-dim);
+                margin-bottom: 16px;
+                font-style: italic;
+            }
+            .etymology span {
+                font-style: normal;
+                color: var(--text-muted);
             }
             .tagline {
                 font-size: 18px;
-                color: #a1a1aa;
+                color: var(--text-muted);
                 line-height: 1.6;
                 margin-bottom: 40px;
             }
+            .theme-toggle {
+                position: absolute;
+                top: 36px;
+                right: 41px;
+                background: none;
+                border: none;
+                cursor: pointer;
+                padding: 4px;
+                color: var(--text-muted);
+                transition: color 0.15s;
+                display: flex;
+                align-items: center;
+            }
+            .theme-toggle:hover {
+                color: var(--text);
+            }
+            .theme-toggle svg {
+                width: 20px;
+                height: 20px;
+            }
             .install {
-                background: #18181b;
-                border: 1px solid #27272a;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
                 border-radius: 8px;
                 padding: 16px 20px;
                 margin-bottom: 40px;
@@ -65,14 +118,14 @@
             .install code {
                 font-family: ui-monospace, monospace;
                 font-size: 14px;
-                color: #d4d4d8;
+                color: var(--code-text);
                 white-space: pre;
                 line-height: 1.7;
             }
             .install button {
                 background: none;
-                border: 1px solid #3f3f46;
-                color: #71717a;
+                border: 1px solid var(--border-hover);
+                color: var(--text-dim);
                 border-radius: 5px;
                 padding: 4px 10px;
                 font-size: 11px;
@@ -83,8 +136,8 @@
                     color 0.15s;
             }
             .install button:hover {
-                border-color: #52525b;
-                color: #e4e4e7;
+                border-color: var(--text-dim);
+                color: var(--text);
             }
             section {
                 margin-bottom: 36px;
@@ -94,12 +147,12 @@
                 font-weight: 600;
                 text-transform: uppercase;
                 letter-spacing: 0.05em;
-                color: #71717a;
+                color: var(--text-dim);
                 margin-bottom: 12px;
             }
             pre {
-                background: #18181b;
-                border: 1px solid #27272a;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
                 border-radius: 8px;
                 padding: 16px 20px;
                 overflow-x: auto;
@@ -108,22 +161,22 @@
                 font-family: ui-monospace, monospace;
                 font-size: 13px;
                 line-height: 1.7;
-                color: #a1a1aa;
+                color: var(--text-muted);
             }
             .codeblock {
                 position: relative;
             }
             .codeblock pre code {
                 font-size: 14px;
-                color: #d4d4d8;
+                color: var(--code-text);
             }
             .codeblock button {
                 position: absolute;
                 top: 16px;
                 right: 16px;
                 background: none;
-                border: 1px solid #3f3f46;
-                color: #71717a;
+                border: 1px solid var(--border-hover);
+                color: var(--text-dim);
                 border-radius: 5px;
                 padding: 4px 10px;
                 font-size: 11px;
@@ -134,8 +187,8 @@
                     color 0.15s;
             }
             .codeblock button:hover {
-                border-color: #52525b;
-                color: #e4e4e7;
+                border-color: var(--text-dim);
+                color: var(--text);
             }
             .features {
                 display: grid;
@@ -143,8 +196,8 @@
                 gap: 12px;
             }
             .feature {
-                background: #18181b;
-                border: 1px solid #27272a;
+                background: var(--bg-secondary);
+                border: 1px solid var(--border);
                 border-radius: 8px;
                 padding: 16px;
             }
@@ -152,11 +205,11 @@
                 font-size: 13px;
                 font-weight: 600;
                 margin-bottom: 4px;
-                color: #d4d4d8;
+                color: var(--code-text);
             }
             .feature p {
                 font-size: 12px;
-                color: #71717a;
+                color: var(--text-dim);
                 line-height: 1.5;
             }
             .prereqs {
@@ -165,30 +218,30 @@
             }
             .prereqs li {
                 font-size: 14px;
-                color: #a1a1aa;
+                color: var(--text-muted);
                 line-height: 1.6;
                 padding: 8px 0;
-                border-bottom: 1px solid #1a1a1e;
+                border-bottom: 1px solid var(--border);
             }
             .prereqs li:last-child {
                 border-bottom: none;
             }
             .prereqs a {
-                color: #e4e4e7;
+                color: var(--text);
                 font-weight: 500;
                 text-decoration: underline;
                 text-underline-offset: 2px;
-                text-decoration-color: #3f3f46;
+                text-decoration-color: var(--border-hover);
             }
             .prereqs a:hover {
-                text-decoration-color: #71717a;
+                text-decoration-color: var(--text-dim);
             }
             .links {
                 display: flex;
                 gap: 20px;
                 margin-top: 48px;
                 padding-top: 24px;
-                border-top: 1px solid #27272a;
+                border-top: 1px solid var(--border);
                 font-size: 13px;
             }
             @media (max-width: 480px) {
@@ -203,7 +256,23 @@
     </head>
     <body>
         <div class="container">
+            <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+                <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <path d="M12 2v2"></path>
+                    <path d="M12 20v2"></path>
+                    <path d="m4.93 4.93 1.41 1.41"></path>
+                    <path d="m17.66 17.66 1.41 1.41"></path>
+                    <path d="M2 12h2"></path>
+                    <path d="M20 12h2"></path>
+                    <path d="m6.34 17.66-1.41 1.41"></path>
+                    <path d="m19.07 4.93-1.41 1.41"></path>
+                </svg>
+            </button>
             <h1>viagen</h1>
+            <p class="etymology">
+                /ˈviː.ə.dʒən/ <span>n.</span> vite + agent; also: travel <span>(Portuguese)</span>
+            </p>
             <p class="tagline">
                 A Vite plugin and cli tool that enables you to use Claude Code
                 in a sandbox — instantly.
@@ -265,21 +334,21 @@ export default defineConfig({
                         Copy
                     </button>
                 </div>
-                <p style="font-size: 15px; color: #a1a1aa; line-height: 1.8">
+                <p style="font-size: 15px; color: var(--text-muted); line-height: 1.8">
                     The setup wizard authenticates with Claude then uses github
                     and vercel to write your local
-                    <code style="font-size: 12px; color: #d4d4d8">.env</code>.
+                    <code style="font-size: 12px; color: var(--code-text)">.env</code>.
                 </p>
                 <p
                     style="
                         font-size: 15px;
-                        color: #a1a1aa;
+                        color: var(--text-muted);
                         line-height: 1.8;
                         margin-top: 10px;
                     "
                 >
                     You can now run
-                    <code style="font-size: 12px; color: #d4d4d8"
+                    <code style="font-size: 12px; color: var(--code-text)"
                         >npm run dev</code
                     >
                     to start the local dev server. At this point you can launch
@@ -297,7 +366,7 @@ export default defineConfig({
                         Copy
                     </button>
                 </div>
-                <p style="font-size: 15px; color: #a1a1aa; line-height: 1.8">
+                <p style="font-size: 15px; color: var(--text-muted); line-height: 1.8">
                     Deploys your dev server to a remote Vercel Sandbox — an
                     isolated vm-like environment where Claude can read, write,
                     and push code.
@@ -327,7 +396,7 @@ npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
                 <p
                     style="
                         font-size: 15px;
-                        color: #a1a1aa;
+                        color: var(--text-muted);
                         line-height: 1.8;
                         margin-top: 16px;
                     "
@@ -347,7 +416,7 @@ Be concise.</code></pre>
                 <p
                     style="
                         font-size: 15px;
-                        color: #a1a1aa;
+                        color: var(--text-muted);
                         line-height: 1.8;
                         margin-top: 16px;
                     "
@@ -363,13 +432,14 @@ viagen({
   systemPrompt: 'You are a React expert. Only use TypeScript.',
 
   // Or extend the default
-  systemPrompt: DEFAULT_SYSTEM_PROMPT + '\nAlways use Tailwind for styling.',
+  systemPrompt: `${DEFAULT_SYSTEM_PROMPT}
+Always use Tailwind for styling.`,
 })</code></pre>
             </section>
 
             <section>
                 <h2>API</h2>
-                <p style="font-size: 15px; color: #a1a1aa; line-height: 1.8">
+                <p style="font-size: 15px; color: var(--text-muted); line-height: 1.8">
                     Every viagen endpoint is available as an API. Build your own
                     UI, integrate with CI, or script Claude from the command
                     line.
@@ -382,21 +452,21 @@ GET  /via/ui          — standalone chat interface</code></pre>
                 <p
                     style="
                         font-size: 15px;
-                        color: #a1a1aa;
+                        color: var(--text-muted);
                         line-height: 1.8;
                         margin-top: 16px;
                     "
                 >
                     When
-                    <code style="font-size: 12px; color: #d4d4d8"
+                    <code style="font-size: 12px; color: var(--code-text)"
                         >VIAGEN_AUTH_TOKEN</code
                     >
                     is set (always on in sandboxes), pass the token as a
-                    <code style="font-size: 12px; color: #d4d4d8"
+                    <code style="font-size: 12px; color: var(--code-text)"
                         >Bearer</code
                     >
                     header or
-                    <code style="font-size: 12px; color: #d4d4d8"
+                    <code style="font-size: 12px; color: var(--code-text)"
                         >?token=</code
                     >
                     query param.
@@ -416,5 +486,38 @@ open "http://localhost:5173/via/ui?token=$VIAGEN_AUTH_TOKEN"</code></pre>
                 <a href="https://www.npmjs.com/package/viagen">npm</a>
             </div>
         </div>
+        <script>
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const html = document.documentElement;
+
+            const sunIcon = `<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path>`;
+            const moonIcon = `<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>`;
+
+            function getSystemTheme() {
+                return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+            }
+
+            function setTheme(theme) {
+                if (theme === 'light') {
+                    html.setAttribute('data-theme', 'light');
+                    themeIcon.innerHTML = moonIcon;
+                } else {
+                    html.removeAttribute('data-theme');
+                    themeIcon.innerHTML = sunIcon;
+                }
+                sessionStorage.setItem('theme', theme);
+            }
+
+            const savedTheme = sessionStorage.getItem('theme');
+            const initialTheme = savedTheme || getSystemTheme();
+            setTheme(initialTheme);
+
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = html.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                setTheme(newTheme);
+            });
+        </script>
     </body>
 </html>
