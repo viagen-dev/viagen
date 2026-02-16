@@ -11,6 +11,9 @@ export default defineConfig([
     entry: ['src/webpack.ts'],
     format: ['esm', 'cjs'],
     dts: true,
+    esbuildOptions(opts) {
+      opts.logOverride = { 'empty-import-meta': 'silent' };
+    },
   },
   {
     entry: ['src/cli.ts'],
