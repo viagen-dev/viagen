@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { LogBuffer } from "./logger";
@@ -103,12 +103,31 @@ export function setupViagen(
     ui: options?.ui ?? true,
   };
 
+  const projectRoot = process.cwd();
+
+  // Load .env file (Vite does this via loadEnv, webpack has no equivalent)
   const env: Record<string, string> = {};
+  const dotenvPath = join(projectRoot, ".env");
+  if (existsSync(dotenvPath)) {
+    const content = readFileSync(dotenvPath, "utf-8");
+    for (const line of content.split("\n")) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx === -1) continue;
+      const key = trimmed.slice(0, eqIdx).trim();
+      let val = trimmed.slice(eqIdx + 1).trim();
+      // Strip surrounding quotes
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      env[key] = val;
+    }
+  }
+  // process.env overrides .env file values
   for (const [k, v] of Object.entries(process.env)) {
     if (v !== undefined) env[k] = v;
   }
-
-  const projectRoot = process.cwd();
   const claudeBin = findClaudeBin();
   const logBuffer = new LogBuffer();
   logBuffer.init(projectRoot);
