@@ -66,7 +66,18 @@
                 font-size: 32px;
                 font-weight: 700;
                 letter-spacing: -0.02em;
-                margin-bottom: 12px;
+                margin-bottom: 4px;
+            }
+            .etymology {
+                font-family: ui-monospace, monospace;
+                font-size: 13px;
+                color: var(--text-dim);
+                margin-bottom: 16px;
+                font-style: italic;
+            }
+            .etymology span {
+                font-style: normal;
+                color: var(--text-muted);
             }
             .tagline {
                 font-size: 18px;
@@ -259,6 +270,9 @@
                 </svg>
             </button>
             <h1>viagen</h1>
+            <p class="etymology">
+                /ˈviː.ə.dʒən/ <span>n.</span> vite + agent; also: travel <span>(Portuguese)</span>
+            </p>
             <p class="tagline">
                 A Vite plugin and cli tool that enables you to use Claude Code
                 in a sandbox — instantly.
