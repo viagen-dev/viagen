@@ -222,6 +222,7 @@ export async function deploySandbox(
     }
     if (opts.git) {
       envMap["GITHUB_TOKEN"] = opts.git.token;
+      envMap["VIAGEN_BRANCH"] = opts.git.branch;
     }
     if (opts.vercel) {
       envMap["VERCEL_TOKEN"] = opts.vercel.token;

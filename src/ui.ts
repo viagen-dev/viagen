@@ -666,7 +666,11 @@ export function buildUiHtml(): string {
     });
     publishBtn.addEventListener('click', function () {
       if (isStreaming) return;
-      inputEl.value = 'Commit all changes, push to the remote repository, and run vercel deploy to get a preview URL';
+      if (publishBtn.dataset.branch && publishBtn.dataset.branch !== 'main' && publishBtn.dataset.branch !== 'master') {
+        inputEl.value = 'Commit all changes, push to the remote branch, and create a pull request using gh pr create. Share the PR URL.';
+      } else {
+        inputEl.value = 'Commit all changes, push to the remote repository, and run vercel deploy to get a preview URL';
+      }
       send();
     });
 
@@ -716,7 +720,10 @@ export function buildUiHtml(): string {
         var banner = document.getElementById('setup-banner');
         if (data.configured) {
           dot.className = 'status-dot ok';
-          if (data.git) publishBtn.style.display = '';
+          if (data.git) {
+            publishBtn.style.display = '';
+            if (data.branch) publishBtn.dataset.branch = data.branch;
+          }
         } else {
           dot.className = 'status-dot error';
           inputEl.disabled = true;

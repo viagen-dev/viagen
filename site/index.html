@@ -458,8 +458,15 @@ will trigger Vite HMR automatically. You can read
 (compile errors, HMR updates, warnings). When running in a
 sandbox with git, the gh CLI is available and authenticated —
 you can create pull requests, comment on issues, and manage
-releases. If Vercel credentials are set, you can run
-"vercel deploy" to publish a preview and share the URL.
+releases.
+
+Publishing workflow:
+- On a feature branch: commit, push, and create a pull
+  request using "gh pr create". Share the PR URL.
+- On main/master with Vercel credentials: commit, push,
+  and run "vercel deploy" to publish a preview.
+- Check your branch with "git branch --show-current" first.
+
 Be concise.</code></pre>
                 <p
                     style="

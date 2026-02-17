@@ -22,6 +22,7 @@ export function registerHealthRoutes(
     const configured =
       !!env["ANTHROPIC_API_KEY"] || !!env["CLAUDE_ACCESS_TOKEN"];
     const git = !!env["GITHUB_TOKEN"];
+    const branch = env["VIAGEN_BRANCH"] || null;
 
     // Session timing (sandbox only)
     const sessionStart = env["VIAGEN_SESSION_START"]
@@ -42,10 +43,10 @@ export function registerHealthRoutes(
     res.setHeader("Content-Type", "application/json");
 
     if (configured) {
-      res.end(JSON.stringify({ status: "ok", configured: true, git, session }));
+      res.end(JSON.stringify({ status: "ok", configured: true, git, branch, session }));
     } else {
       res.end(
-        JSON.stringify({ status: "error", configured: false, git, session }),
+        JSON.stringify({ status: "error", configured: false, git, branch, session }),
       );
     }
   });

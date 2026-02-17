@@ -22,7 +22,7 @@ describe("health routes", () => {
     it("returns ok when API key is configured", async () => {
       const res = await fetch(`${server.url}/via/health`);
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ status: "ok", configured: true, git: false, session: null });
+      expect(await res.json()).toEqual({ status: "ok", configured: true, git: false, branch: null, session: null });
     });
   });
 
@@ -70,6 +70,7 @@ describe("health routes — missing API key", () => {
       status: "error",
       configured: false,
       git: false,
+      branch: null,
       session: null,
     });
   });

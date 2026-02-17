@@ -63,7 +63,7 @@ describe("auth middleware", () => {
     const setCookie = res.headers.get("Set-Cookie");
     expect(setCookie).toContain(`viagen_session=${TOKEN}`);
     expect(setCookie).toContain("HttpOnly");
-    expect(setCookie).toContain("SameSite=Strict");
+    expect(setCookie).toContain("SameSite=Lax");
   });
 
   it("redirects to clean path when token is the only param", async () => {
