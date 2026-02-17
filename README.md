@@ -66,6 +66,20 @@ viagen({
 })
 ```
 
+### Sandbox Files
+
+Gitignored files (credentials, service accounts, etc.) aren't included when cloning from remote. To forward them into the sandbox, add a `viagen.sandboxFiles` array to your `package.json`:
+
+```json
+{
+  "viagen": {
+    "sandboxFiles": ["creds.json", "service-account.json"]
+  }
+}
+```
+
+These files are always overlaid into the sandbox regardless of deploy mode.
+
 The default system prompt:
 
 ```

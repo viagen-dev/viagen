@@ -14,7 +14,10 @@ let docsHtmlCache: string | undefined;
 function getDocsHtml(): string {
   if (!docsHtmlCache) {
     const dir = dirname(fileURLToPath(import.meta.url));
-    docsHtmlCache = readFileSync(join(dir, "..", "site", "index.html"), "utf-8");
+    docsHtmlCache = readFileSync(
+      join(dir, "..", "site", "index.html"),
+      "utf-8",
+    );
   }
   return docsHtmlCache;
 }
@@ -32,14 +35,17 @@ export interface ViagenOptions {
   ui?: boolean;
   /** Custom system prompt appended to Claude. Overrides the default. */
   systemPrompt?: string;
+  /**
+   * Files to always include in sandbox deployments (e.g. credentials, configs).
+   * Paths are relative to the project root. Read from package.json `viagen.sandboxFiles`.
+   * @example ["config.json"]
+   */
+  sandboxFiles?: string[];
 }
 
 export { DEFAULT_SYSTEM_PROMPT } from "./chat";
 
-export {
-  deploySandbox,
-  type GitInfo,
-} from "./sandbox";
+export { deploySandbox, type GitInfo } from "./sandbox";
 
 export function viagen(options?: ViagenOptions): Plugin {
   const opts = {
@@ -74,10 +80,7 @@ export function viagen(options?: ViagenOptions): Plugin {
     transformIndexHtml(_html, ctx) {
       if (!opts.ui) return [];
 
-      const url = new URL(
-        ctx.originalUrl || ctx.path,
-        "http://localhost",
-      );
+      const url = new URL(ctx.originalUrl || ctx.path, "http://localhost");
       const isEmbed = url.searchParams.has("_viagen_embed");
 
       if (isEmbed) {

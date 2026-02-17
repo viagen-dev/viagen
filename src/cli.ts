@@ -631,6 +631,32 @@ async function sandbox(args: string[]) {
     );
   }
 
+  // Read sandboxFiles from package.json
+  const pkgPath = join(cwd, "package.json");
+  if (existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
+      const sandboxFiles: string[] = pkg.viagen?.sandboxFiles ?? [];
+      if (sandboxFiles.length > 0) {
+        const extra: { path: string; content: Buffer }[] = [];
+        for (const file of sandboxFiles) {
+          const fullPath = join(cwd, file);
+          if (existsSync(fullPath)) {
+            extra.push({ path: file, content: readFileSync(fullPath) });
+          } else {
+            console.log(`  Warning: sandboxFiles entry "${file}" not found, skipping.`);
+          }
+        }
+        if (extra.length > 0) {
+          overlayFiles = [...(overlayFiles ?? []), ...extra];
+          console.log(`  Including ${extra.length} extra file(s) from sandboxFiles config.`);
+        }
+      }
+    } catch {
+      // Ignore parse errors — package.json is optional for this
+    }
+  }
+
   console.log("");
   console.log("Creating sandbox...");
   if (deployGit) {

@@ -439,6 +439,26 @@ npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
   ui: true,                  // inject chat panel into pages
   systemPrompt: '...',       // custom system prompt (see below)
 })</code></pre>
+
+                <h3 style="margin-top: 32px">Sandbox Files</h3>
+                <p
+                    style="
+                        font-size: 15px;
+                        color: var(--text-muted);
+                        line-height: 1.8;
+                        margin-top: 8px;
+                    "
+                >
+                    Gitignored files (credentials, service accounts) aren't
+                    included when cloning from remote. Forward them into the
+                    sandbox via <code>package.json</code>:
+                </p>
+                <pre style="margin-top: 12px"><code>{
+  "viagen": {
+    "sandboxFiles": ["creds.json"]
+  }
+}</code></pre>
+
                 <p
                     style="
                         font-size: 15px;
