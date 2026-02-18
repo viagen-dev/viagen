@@ -688,20 +688,25 @@ async function sandbox(args: string[]) {
     timeoutMinutes,
   });
 
+  const iframeUrl = result.url.replace("?token=", "via/iframe?token=");
+  const chatUrl = result.url.replace("?token=", "via/ui?token=");
+
   console.log("");
   console.log("Sandbox deployed!");
   console.log("");
-  console.log(`  URL:        ${result.url}`);
+  console.log(`  App:        ${result.url}`);
+  console.log(`  Split view: ${iframeUrl}`);
+  console.log(`  Chat only:  ${chatUrl}`);
+  console.log("");
   console.log(`  Sandbox ID: ${result.sandboxId}`);
   console.log(
     `  Mode:       ${result.mode === "git" ? "git clone (can push)" : "file upload (ephemeral)"}`,
   );
-  console.log(`  Token:      ${result.token}`);
   console.log(`  Timeout:    ${timeoutMinutes ?? 30} minutes`);
   console.log("");
   console.log(`Stop with: npx viagen sandbox stop ${result.sandboxId}`);
 
-  openBrowser(result.url);
+  openBrowser(iframeUrl);
 }
 
 // ─── help ────────────────────────────────────────────────────────
