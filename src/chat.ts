@@ -1,5 +1,7 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { join } from "node:path";
 import type { IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
 import type { LogBuffer } from "./logger";
@@ -68,20 +70,39 @@ export function registerChatRoutes(
       return;
     }
 
-    // Refresh OAuth token if expired
+    // Refresh OAuth token if expired (or expiring within 5 min)
     if (hasOAuthToken && opts.env["CLAUDE_TOKEN_EXPIRES"]) {
       const expires = parseInt(opts.env["CLAUDE_TOKEN_EXPIRES"], 10);
-      if (Date.now() / 1000 > expires - 60) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      if (nowSec > expires - 300) {
         try {
           const tokens = await refreshAccessToken(opts.env["CLAUDE_REFRESH_TOKEN"]);
           opts.env["CLAUDE_ACCESS_TOKEN"] = tokens.access_token;
           opts.env["CLAUDE_REFRESH_TOKEN"] = tokens.refresh_token;
-          opts.env["CLAUDE_TOKEN_EXPIRES"] = String(
-            Math.floor(Date.now() / 1000) + tokens.expires_in,
-          );
-        } catch {
+          opts.env["CLAUDE_TOKEN_EXPIRES"] = String(nowSec + tokens.expires_in);
+
+          // Persist refreshed tokens to .env so they survive restarts
+          const envPath = join(opts.projectRoot, ".env");
+          if (existsSync(envPath)) {
+            let content = readFileSync(envPath, "utf-8");
+            const replacements: Record<string, string> = {
+              CLAUDE_ACCESS_TOKEN: tokens.access_token,
+              CLAUDE_REFRESH_TOKEN: tokens.refresh_token,
+              CLAUDE_TOKEN_EXPIRES: String(nowSec + tokens.expires_in),
+            };
+            for (const [key, val] of Object.entries(replacements)) {
+              const re = new RegExp(`^${key}=.*$`, "m");
+              if (re.test(content)) {
+                content = content.replace(re, `${key}=${val}`);
+              }
+            }
+            writeFileSync(envPath, content);
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          console.error(`[viagen] OAuth token refresh failed: ${msg}`);
           res.statusCode = 500;
-          res.end(JSON.stringify({ error: "OAuth token refresh failed. Run `npx viagen setup` again." }));
+          res.end(JSON.stringify({ error: `OAuth token refresh failed: ${msg}` }));
           return;
         }
       }
