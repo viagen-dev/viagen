@@ -15,8 +15,7 @@
     "viagen": "./dist/cli.js"
   },
   "files": [
-    "dist",
-    "site"
+    "dist"
   ],
   "scripts": {
     "build": "tsup",
