@@ -594,7 +594,8 @@ GET  /via/files       — list editable files (when configured)
 GET  /via/file?path=  — read file content
 POST /via/file        — write file content { path, content }
 GET  /via/git/status  — list changed files (git status)
-GET  /via/git/diff    — full diff, or single file with ?path=</code></pre>
+GET  /via/git/diff    — full diff, or single file with ?path=
+GET  /via/logs        — dev server log entries, optional ?since=&lt;timestamp&gt;</code></pre>
                 <p
                     style="
                         font-size: 15px;
@@ -628,6 +629,7 @@ open "http://localhost:5173/via/ui?token=$VIAGEN_AUTH_TOKEN"</code></pre>
             </section>
 
             <div class="links">
+                <a href="/platform.html">Platform</a>
                 <a href="https://github.com/cif/viagen">GitHub</a>
                 <a href="https://www.npmjs.com/package/viagen">npm</a>
                 <a href="https://github.com/cif/viagen/blob/main/LICENSE"
