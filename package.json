@@ -1,6 +1,6 @@
 {
   "name": "viagen",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "description": "Vite dev server plugin that exposes endpoints for chatting with Claude Code SDK",
   "type": "module",
   "main": "./dist/index.js",
@@ -41,7 +41,8 @@
   "dependencies": {
     "@anthropic-ai/claude-code": "^2.1.42",
     "@vercel/sandbox": "^1",
-    "lucide-react": "^0.564.0"
+    "lucide-react": "^0.564.0",
+    "viagen-sdk": "^0.0.0"
   },
   "license": "MIT",
   "repository": {

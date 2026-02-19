@@ -6,6 +6,12 @@ import { homedir } from "node:os";
 import { deploySandbox, stopSandbox, collectFiles } from "./sandbox";
 import { oauthMaxFlow, oauthConsoleFlow, refreshAccessToken } from "./oauth";
 import type { GitInfo } from "./sandbox";
+import {
+  createViagen,
+  saveCredentials,
+  loadCredentials,
+  clearCredentials,
+} from "viagen-sdk";
 
 function loadDotenv(dir: string): Record<string, string> {
   const envPath = join(dir, ".env");
@@ -245,9 +251,36 @@ async function setup() {
   console.log("");
 
   // Step 1: Claude authentication
-  if (existing["ANTHROPIC_API_KEY"] || existing["CLAUDE_ACCESS_TOKEN"]) {
+  let claudeExpired = false;
+  if (existing["CLAUDE_ACCESS_TOKEN"] && existing["CLAUDE_TOKEN_EXPIRES"]) {
+    const expires = parseInt(existing["CLAUDE_TOKEN_EXPIRES"], 10);
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (nowSec > expires) {
+      // Try refreshing first
+      if (existing["CLAUDE_REFRESH_TOKEN"]) {
+        console.log("Claude auth ... token expired, attempting refresh...");
+        try {
+          const tokens = await refreshAccessToken(existing["CLAUDE_REFRESH_TOKEN"]);
+          newVars["CLAUDE_ACCESS_TOKEN"] = tokens.access_token;
+          newVars["CLAUDE_REFRESH_TOKEN"] = tokens.refresh_token;
+          newVars["CLAUDE_TOKEN_EXPIRES"] = String(nowSec + tokens.expires_in);
+          console.log("Claude auth ... refreshed");
+        } catch {
+          console.log("Claude auth ... refresh failed, need to re-authenticate");
+          claudeExpired = true;
+        }
+      } else {
+        console.log("Claude auth ... token expired, need to re-authenticate");
+        claudeExpired = true;
+      }
+    } else {
+      console.log("Claude auth ... already configured");
+    }
+  } else if (existing["ANTHROPIC_API_KEY"]) {
     console.log("Claude auth ... already configured");
-  } else {
+  }
+
+  if (claudeExpired || (!existing["ANTHROPIC_API_KEY"] && !existing["CLAUDE_ACCESS_TOKEN"])) {
     console.log("How do you want to authenticate with Claude?");
     console.log("");
     console.log("  1) Log in with Claude Max/Pro (recommended)");
@@ -338,7 +371,52 @@ async function setup() {
 
   console.log("");
 
-  // Step 3: Vercel
+  // Step 3: Git repo info
+  {
+    const detectedGit = getGitInfo(cwd);
+    const savedUrl = existing["GIT_REMOTE_URL"];
+
+    if (savedUrl && detectedGit && savedUrl !== detectedGit.remoteUrl) {
+      // Mismatch — the .env points somewhere different than the local remote
+      console.log(`Git repo     ... mismatch!`);
+      console.log(`  .env:   ${savedUrl}`);
+      console.log(`  local:  ${detectedGit.remoteUrl}`);
+      console.log("");
+      const fix = await promptUser("Update .env to match local remote? [y/n]: ");
+      if (fix === "y" || fix === "yes" || !fix) {
+        newVars["GIT_REMOTE_URL"] = detectedGit.remoteUrl;
+        newVars["GIT_BRANCH"] = detectedGit.branch;
+        newVars["GIT_USER_NAME"] = detectedGit.userName;
+        newVars["GIT_USER_EMAIL"] = detectedGit.userEmail;
+        console.log("Git repo     ... updated");
+      } else {
+        console.log("Git repo     ... keeping .env value");
+      }
+    } else if (savedUrl) {
+      console.log(`Git repo     ... ${savedUrl}`);
+    } else if (detectedGit) {
+      console.log(`Detected git remote: ${detectedGit.remoteUrl}`);
+      console.log(`  Branch: ${detectedGit.branch}`);
+      console.log(`  User:   ${detectedGit.userName} <${detectedGit.userEmail}>`);
+      console.log("");
+      const useIt = await promptUser("Save this to .env? [y/n]: ");
+      if (useIt === "y" || useIt === "yes" || !useIt) {
+        newVars["GIT_REMOTE_URL"] = detectedGit.remoteUrl;
+        newVars["GIT_BRANCH"] = detectedGit.branch;
+        newVars["GIT_USER_NAME"] = detectedGit.userName;
+        newVars["GIT_USER_EMAIL"] = detectedGit.userEmail;
+        console.log("Git repo     ... saved");
+      } else {
+        console.log("Git repo     ... skipped");
+      }
+    } else {
+      console.log("Git repo     ... not detected (not a git repo or no remote)");
+    }
+  }
+
+  console.log("");
+
+  // Step 4: Vercel
   const hasVercel =
     existing["VERCEL_TOKEN"] &&
     existing["VERCEL_TEAM_ID"] &&
@@ -451,7 +529,19 @@ async function setup() {
 
   // Step 4: Write .env
   if (Object.keys(newVars).length > 0) {
-    writeEnvVars(cwd, newVars);
+    // Split into new keys (to add) and existing keys (to update)
+    const toUpdate: Record<string, string> = {};
+    const toAdd: Record<string, string> = {};
+    for (const [key, val] of Object.entries(newVars)) {
+      if (existing[key]) {
+        toUpdate[key] = val;
+      } else {
+        toAdd[key] = val;
+      }
+    }
+    if (Object.keys(toAdd).length > 0) writeEnvVars(cwd, toAdd);
+    if (Object.keys(toUpdate).length > 0) updateEnvVars(cwd, toUpdate);
+
     console.log("Wrote to .env:");
     for (const key of Object.keys(newVars)) {
       const display =
@@ -468,6 +558,43 @@ async function setup() {
   console.log("Next steps:");
   console.log("  npm run dev          Start the dev server");
   console.log("  npx viagen sandbox   Deploy to a sandbox");
+}
+
+// ─── dev command ─────────────────────────────────────────────────
+
+import { spawn as spawnChild } from "node:child_process";
+
+function dev() {
+  const child = spawnChild("npx", ["vite"], {
+    cwd: process.cwd(),
+    stdio: ["inherit", "pipe", "inherit"],
+    shell: true,
+  });
+
+  let opened = false;
+
+  child.stdout?.on("data", (chunk: Buffer) => {
+    const text = chunk.toString();
+    process.stdout.write(text);
+
+    if (!opened) {
+      const match = text.match(/Local:\s+(https?:\/\/[^\s]+)/);
+      if (match) {
+        opened = true;
+        const baseUrl = match[1].replace(/\/$/, "");
+        const iframeUrl = `${baseUrl}/via/iframe`;
+        setTimeout(() => openBrowser(iframeUrl), 500);
+      }
+    }
+  });
+
+  child.on("close", (code) => {
+    process.exit(code ?? 0);
+  });
+
+  // Forward signals to child
+  process.on("SIGINT", () => child.kill("SIGINT"));
+  process.on("SIGTERM", () => child.kill("SIGTERM"));
 }
 
 // ─── sandbox command ─────────────────────────────────────────────
@@ -556,9 +683,27 @@ async function sandbox(args: string[]) {
     process.exit(1);
   }
 
-  // Git detection
+  // Git detection — prefer .env vars over runtime detection
   const githubToken = env["GITHUB_TOKEN"];
-  const gitInfo = getGitInfo(cwd);
+  const envRemoteUrl = env["GIT_REMOTE_URL"];
+  const envBranch = env["GIT_BRANCH"];
+  const envUserName = env["GIT_USER_NAME"];
+  const envUserEmail = env["GIT_USER_EMAIL"];
+
+  // Use .env git info if available, otherwise fall back to runtime detection
+  const gitInfo: LocalGitInfo | null = envRemoteUrl
+    ? {
+        remoteUrl: envRemoteUrl,
+        branch: envBranch || "main",
+        userName: envUserName || "viagen",
+        userEmail: envUserEmail || "noreply@viagen.dev",
+        isDirty: false, // can't know from env, assume clean
+      }
+    : getGitInfo(cwd);
+
+  if (envRemoteUrl) {
+    console.log("Using git info from .env");
+  }
 
   let deployGit: GitInfo | undefined;
   let overlayFiles: { path: string; content: Buffer }[] | undefined;
@@ -599,7 +744,8 @@ async function sandbox(args: string[]) {
       token: githubToken,
     });
 
-    if (gitInfo.isDirty && !branchOverride) {
+    // Only offer dirty-tree options when using runtime detection (not .env)
+    if (!envRemoteUrl && gitInfo.isDirty && !branchOverride) {
       console.log("");
       console.log("Your working tree has uncommitted changes.");
       console.log("");
@@ -688,8 +834,8 @@ async function sandbox(args: string[]) {
     timeoutMinutes,
   });
 
-  const iframeUrl = result.url.replace("?token=", "via/iframe?token=");
-  const chatUrl = result.url.replace("?token=", "via/ui?token=");
+  const iframeUrl = result.url.replace("?token=", "/via/iframe?token=");
+  const chatUrl = result.url.replace("?token=", "/via/ui?token=");
 
   console.log("");
   console.log("Sandbox deployed!");
@@ -709,6 +855,225 @@ async function sandbox(args: string[]) {
   openBrowser(iframeUrl);
 }
 
+// ─── login command ───────────────────────────────────────────────
+
+const PLATFORM_URL = "http://localhost:5175";
+
+async function login() {
+  // Check if already logged in
+  const existing = await loadCredentials();
+  if (existing) {
+    const client = createViagen({
+      baseUrl: existing.baseUrl,
+      token: existing.token,
+    });
+    try {
+      const user = await client.auth.me();
+      if (user) {
+        console.log(`Already logged in as ${user.email}`);
+        const answer = await promptUser("Log in again? [y/n]: ");
+        if (answer !== "y" && answer !== "yes") return;
+      }
+    } catch {
+      // Token expired or invalid — proceed with login
+    }
+  }
+
+  console.log("viagen login");
+  console.log("");
+
+  const client = createViagen({ baseUrl: PLATFORM_URL });
+
+  console.log("Opening browser to authorize...");
+  const { token, expiresAt } = await client.auth.loginCli({
+    onOpenUrl: (url) => {
+      openBrowser(url);
+      console.log("");
+      console.log("If the browser didn't open, visit:");
+      console.log(`  ${url}`);
+      console.log("");
+      console.log("Waiting for authorization...");
+    },
+  });
+
+  await saveCredentials({ token, baseUrl: PLATFORM_URL, expiresAt });
+
+  // Verify the token works
+  const authed = createViagen({ baseUrl: PLATFORM_URL, token });
+  const user = await authed.auth.me();
+
+  console.log("");
+  if (user) {
+    console.log(`Logged in as ${user.email}`);
+  } else {
+    console.log("Logged in.");
+  }
+  console.log("Credentials saved to ~/.config/viagen/credentials.json");
+}
+
+// ─── logout command ──────────────────────────────────────────────
+
+async function logout() {
+  const existing = await loadCredentials();
+  if (!existing) {
+    console.log("Not logged in.");
+    return;
+  }
+
+  await clearCredentials();
+  console.log("Logged out. Credentials removed.");
+}
+
+// ─── whoami command ──────────────────────────────────────────────
+
+async function whoami() {
+  const existing = await loadCredentials();
+  if (!existing) {
+    console.log("Not logged in. Run `viagen login` to authenticate.");
+    return;
+  }
+
+  const client = createViagen({
+    baseUrl: existing.baseUrl,
+    token: existing.token,
+  });
+
+  try {
+    const user = await client.auth.me();
+    if (user) {
+      console.log(`${user.email}${user.name ? ` (${user.name})` : ""}`);
+      if (user.organizations.length > 0) {
+        console.log(
+          `Orgs: ${user.organizations.map((o) => o.name).join(", ")}`,
+        );
+      }
+    } else {
+      console.log("Session expired. Run `viagen login` to re-authenticate.");
+    }
+  } catch {
+    console.log("Session expired. Run `viagen login` to re-authenticate.");
+  }
+}
+
+// ─── platform client helper ──────────────────────────────────────
+
+import type { ViagenClient } from "viagen-sdk";
+
+async function requireClient(): Promise<ViagenClient> {
+  const creds = await loadCredentials();
+  if (!creds) {
+    console.error("Not logged in. Run `viagen login` first.");
+    process.exit(1);
+  }
+  return createViagen({ baseUrl: creds.baseUrl, token: creds.token });
+}
+
+// ─── orgs command ────────────────────────────────────────────────
+
+async function orgs(args: string[]) {
+  const sub = args[0];
+
+  if (sub === "create") {
+    const name = args.slice(1).join(" ");
+    if (!name) {
+      console.error("Usage: viagen orgs create <name>");
+      process.exit(1);
+    }
+    const client = await requireClient();
+    const org = await client.orgs.create({ name });
+    console.log(`Created org "${org.name}" (${org.id})`);
+    return;
+  }
+
+  if (sub === "invite") {
+    const email = args[1];
+    if (!email) {
+      console.error("Usage: viagen orgs invite <email>");
+      process.exit(1);
+    }
+    const client = await requireClient();
+    await client.orgs.addMember({ email });
+    console.log(`Invited ${email}`);
+    return;
+  }
+
+  // Default: list orgs
+  const client = await requireClient();
+  const memberships = (await client.orgs.list()) ?? [];
+
+  if (memberships.length === 0) {
+    console.log("No organizations. Create one with `viagen orgs create <name>`.");
+    return;
+  }
+
+  for (const m of memberships) {
+    const role = m.role ? ` (${m.role})` : "";
+    console.log(`  ${m.organizationName}${role}`);
+  }
+}
+
+// ─── projects command ────────────────────────────────────────────
+
+async function projects(args: string[]) {
+  const sub = args[0];
+
+  if (sub === "create") {
+    const name = args.slice(1).join(" ");
+    if (!name) {
+      console.error("Usage: viagen projects create <name>");
+      process.exit(1);
+    }
+    const client = await requireClient();
+    const project = await client.projects.create({ name });
+    console.log(`Created project "${project.name}" (${project.id})`);
+    return;
+  }
+
+  if (sub === "get") {
+    const id = args[1];
+    if (!id) {
+      console.error("Usage: viagen projects get <id>");
+      process.exit(1);
+    }
+    const client = await requireClient();
+    const project = await client.projects.get(id);
+    console.log(`  Name:     ${project.name}`);
+    console.log(`  ID:       ${project.id}`);
+    if (project.githubRepo) console.log(`  GitHub:   ${project.githubRepo}`);
+    if (project.templateId) console.log(`  Template: ${project.templateId}`);
+    console.log(`  Created:  ${project.createdAt}`);
+    return;
+  }
+
+  if (sub === "delete") {
+    const id = args[1];
+    if (!id) {
+      console.error("Usage: viagen projects delete <id>");
+      process.exit(1);
+    }
+    const answer = await promptUser(`Delete project ${id}? [y/n]: `);
+    if (answer !== "y" && answer !== "yes") return;
+    const client = await requireClient();
+    await client.projects.delete(id);
+    console.log("Project deleted.");
+    return;
+  }
+
+  // Default: list projects
+  const client = await requireClient();
+  const list = (await client.projects.list()) ?? [];
+
+  if (list.length === 0) {
+    console.log("No projects. Create one with `viagen projects create <name>`.");
+    return;
+  }
+
+  for (const p of list) {
+    const repo = p.githubRepo ? ` (${p.githubRepo})` : "";
+    console.log(`  ${p.name}${repo}  ${p.id}`);
+  }
+}
+
 // ─── help ────────────────────────────────────────────────────────
 
 function help() {
@@ -718,6 +1083,17 @@ function help() {
   console.log("  viagen <command>");
   console.log("");
   console.log("Commands:");
+  console.log("  login                          Log in to the viagen platform");
+  console.log("  logout                         Log out and remove credentials");
+  console.log("  whoami                         Show current user");
+  console.log("  orgs                           List your organizations");
+  console.log("  orgs create <name>             Create a new organization");
+  console.log("  orgs invite <email>            Invite a member to the org");
+  console.log("  projects                       List projects in current org");
+  console.log("  projects create <name>         Create a new project");
+  console.log("  projects get <id>              Show project details");
+  console.log("  projects delete <id>           Delete a project");
+  console.log("  dev                            Start Vite and open the split view");
   console.log("  setup                          Set up .env with API keys and tokens");
   console.log("  sandbox [-b branch] [-t min]   Deploy your project to a Vercel Sandbox");
   console.log("  sandbox stop <id>              Stop a running sandbox");
@@ -744,6 +1120,18 @@ function help() {
     "  GITHUB_TOKEN           Enables git commit+push from sandbox.",
   );
   console.log(
+    "  GIT_REMOTE_URL         Git remote (from setup, overrides runtime detection).",
+  );
+  console.log(
+    "  GIT_BRANCH             Git branch for sandbox.",
+  );
+  console.log(
+    "  GIT_USER_NAME          Git user name for sandbox commits.",
+  );
+  console.log(
+    "  GIT_USER_EMAIL         Git user email for sandbox commits.",
+  );
+  console.log(
     "  VIAGEN_AUTH_TOKEN      Protects all endpoints with token auth.",
   );
   console.log(
@@ -765,7 +1153,20 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
 
-  if (command === "setup") {
+  if (command === "login") {
+    await login();
+  } else if (command === "logout") {
+    await logout();
+  } else if (command === "whoami") {
+    await whoami();
+  } else if (command === "orgs") {
+    await orgs(args.slice(1));
+  } else if (command === "projects") {
+    await projects(args.slice(1));
+  } else if (command === "dev") {
+    dev();
+    return;
+  } else if (command === "setup") {
     await setup();
   } else if (command === "sandbox") {
     await sandbox(args.slice(1));

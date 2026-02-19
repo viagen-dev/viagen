@@ -30,7 +30,7 @@ export default defineConfig({
 npx viagen setup
 ```
 
-The setup wizard authenticates with Claude then uses GitHub and Vercel to write your local `.env`.
+The setup wizard authenticates with Claude, detects your GitHub and Vercel credentials, and captures your git remote info — all written to your local `.env`. This ensures sandboxes clone the correct repo instead of inferring it at runtime.
 
 You can now run `npm run dev` to start the local dev server. At this point you can launch viagen and chat with Claude to make changes to your app.
 
@@ -78,7 +78,7 @@ viagen({
 })
 ```
 
-Paths can be files or directories (directories include all files within). The editor appears as a "Files" tab in the chat panel. `.env` files get a key-value form with masked values.
+Paths can be files or directories (directories include all files within). The editor appears as a "Files" tab in the chat panel.
 
 The default system prompt:
 
