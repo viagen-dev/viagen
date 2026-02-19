@@ -430,6 +430,42 @@ npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
             </section>
 
             <section>
+                <h2>SSR Frameworks</h2>
+                <p
+                    style="
+                        font-size: 15px;
+                        color: var(--text-muted);
+                        line-height: 1.8;
+                    "
+                >
+                    For plain Vite apps, the chat panel is injected
+                    automatically. SSR frameworks (React Router, Remix,
+                    SvelteKit, etc.) render their own HTML, so add one script
+                    tag to your root layout:
+                </p>
+                <pre
+                    style="margin-top: 12px"
+                ><code>&lt;script src="/via/client.js" defer&gt;&lt;/script&gt;</code></pre>
+                <p
+                    style="
+                        font-size: 15px;
+                        color: var(--text-muted);
+                        line-height: 1.8;
+                        margin-top: 12px;
+                    "
+                >
+                    For React Router, add it to
+                    <code style="font-size: 12px; color: var(--code-text)"
+                        >app/root.tsx</code
+                    >
+                    inside the
+                    <code style="font-size: 12px; color: var(--code-text)"
+                        >&lt;head&gt;</code
+                    >.
+                </p>
+            </section>
+
+            <section>
                 <h2>Vite Plugin Options</h2>
                 <pre><code>viagen({
   position: 'bottom-right',  // toggle button position
@@ -438,7 +474,7 @@ npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
   overlay: true,             // fix button on error overlay
   ui: true,                  // inject chat panel into pages
   sandboxFiles: [...],       // copy files manually into sandbox
-  editable: ['src'], // files/dirs editable in the UI
+  editable: ['src'],         // files/dirs editable in the UI
   systemPrompt: '...',       // custom system prompt (see below)
 })</code></pre>
 

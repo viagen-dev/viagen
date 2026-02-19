@@ -68,6 +68,30 @@ viagen({
 })
 ```
 
+### SSR Frameworks (React Router, Remix, SvelteKit, etc.)
+
+For plain Vite apps, the chat panel is injected automatically. SSR frameworks render their own HTML, so you need to add one script tag to your root layout:
+
+```html
+<script src="/via/client.js" defer></script>
+```
+
+For React Router, add it to `app/root.tsx`:
+
+```tsx
+export default function Root() {
+  return (
+    <html>
+      <head>
+        <script src="/via/client.js" defer />
+        {/* ... */}
+      </head>
+      {/* ... */}
+    </html>
+  )
+}
+```
+
 ### Editable Files
 
 Add a file editor panel to the chat UI:

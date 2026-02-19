@@ -2,7 +2,6 @@ export function buildClientScript(opts: {
   position: string;
   panelWidth: number;
   overlay: boolean;
-  embedMode?: boolean;
 }): string {
   const pos = opts.position;
   const pw = opts.panelWidth;
@@ -22,8 +21,10 @@ export function buildClientScript(opts: {
 
   return /* js */ `
 (function() {
+  if (document.getElementById('viagen-toggle')) return;
+
   var OVERLAY_ENABLED = ${opts.overlay};
-  var EMBED_MODE = ${opts.embedMode ? "true" : "false"};
+  var EMBED_MODE = new URLSearchParams(window.location.search).has('_viagen_embed');
 
   /* ---- Error overlay: inject Fix button into shadow DOM ---- */
   if (OVERLAY_ENABLED) {

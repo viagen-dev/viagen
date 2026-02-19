@@ -9,6 +9,7 @@ import { buildUiHtml } from "./ui";
 import { buildIframeHtml } from "./iframe";
 import { createAuthMiddleware } from "./auth";
 import { registerFileRoutes } from "./files";
+import { createInjectionMiddleware } from "./inject";
 
 export interface ViagenOptions {
   /** Toggle button placement. Default: 'bottom-right' */
@@ -85,24 +86,10 @@ export function viagen(options?: ViagenOptions): Plugin {
     transformIndexHtml(_html, ctx) {
       if (!opts.ui) return [];
 
+      // In embed mode, only inject if overlay is enabled (for the Fix button)
       const url = new URL(ctx.originalUrl || ctx.path, "http://localhost");
       const isEmbed = url.searchParams.has("_viagen_embed");
-
-      if (isEmbed) {
-        if (!opts.overlay) return [];
-        return [
-          {
-            tag: "script",
-            children: buildClientScript({
-              position: opts.position,
-              panelWidth: opts.panelWidth,
-              overlay: true,
-              embedMode: true,
-            }),
-            injectTo: "body" as const,
-          },
-        ];
-      }
+      if (isEmbed && !opts.overlay) return [];
 
       return [
         {
@@ -147,6 +134,17 @@ export function viagen(options?: ViagenOptions): Plugin {
 
       const hasEditor = !!(options?.editable && options.editable.length > 0);
 
+      // Client script — served as a JS file for SSR injection
+      const clientJs = buildClientScript({
+        position: opts.position,
+        panelWidth: opts.panelWidth,
+        overlay: opts.overlay,
+      });
+      server.middlewares.use("/via/client.js", (_req, res) => {
+        res.setHeader("Content-Type", "application/javascript");
+        res.end(clientJs);
+      });
+
       // Chat UI
       server.middlewares.use("/via/ui", (_req, res) => {
         res.setHeader("Content-Type", "text/html");
@@ -179,6 +177,14 @@ export function viagen(options?: ViagenOptions): Plugin {
           editable: options!.editable!,
           projectRoot,
         });
+      }
+
+      // Post-middleware: inject client script into SSR-rendered HTML
+      // Runs after Vite's internal transformIndexHtml middleware
+      if (opts.ui) {
+        return () => {
+          server.middlewares.use(createInjectionMiddleware());
+        };
       }
     },
   };
