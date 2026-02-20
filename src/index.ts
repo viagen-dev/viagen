@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { loadEnv, type Plugin } from "vite";
@@ -57,6 +58,8 @@ export function viagen(options?: ViagenOptions): Plugin {
   let projectRoot: string;
   let claudeBin: string;
   let lastError: ViteError | null = null;
+  let promptSent = false;
+  let branchCheckedOut = false;
   const logBuffer = new LogBuffer();
 
   return {
@@ -128,6 +131,22 @@ export function viagen(options?: ViagenOptions): Plugin {
         };
       }
 
+      // Force checkout GIT_BRANCH if set (sandbox mode, once only)
+      const gitBranch = env["GIT_BRANCH"];
+      if (gitBranch && !branchCheckedOut) {
+        branchCheckedOut = true;
+        try {
+          execSync(`git checkout -f ${gitBranch}`, {
+            cwd: projectRoot,
+            stdio: "pipe",
+          });
+          logBuffer.push("info", `[viagen] Checked out branch: ${gitBranch}`);
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          logBuffer.push("error", `[viagen] Failed to checkout ${gitBranch}: ${msg}`);
+        }
+      }
+
       // Auth middleware — only when VIAGEN_AUTH_TOKEN is set
       const authToken = env["VIAGEN_AUTH_TOKEN"];
       if (authToken) {
@@ -190,9 +209,10 @@ export function viagen(options?: ViagenOptions): Plugin {
       // Log routes (dev server logs)
       registerLogRoutes(server, { logBuffer });
 
-      // Auto-send initial prompt if VIAGEN_PROMPT is set (headless mode)
+      // Auto-send initial prompt if VIAGEN_PROMPT is set (headless mode, once only)
       const initialPrompt = env["VIAGEN_PROMPT"];
-      if (initialPrompt) {
+      if (initialPrompt && !promptSent) {
+        promptSent = true;
         logBuffer.push("info", `[viagen] Auto-sending prompt: "${initialPrompt}"`);
         chatSession.sendMessage(initialPrompt, (event) => {
           if (event.type === "done") {
