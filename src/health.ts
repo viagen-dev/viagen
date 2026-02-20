@@ -40,13 +40,15 @@ export function registerHealthRoutes(
           }
         : null;
 
+    const prompt = env["VIAGEN_PROMPT"] || null;
+
     res.setHeader("Content-Type", "application/json");
 
     if (configured) {
-      res.end(JSON.stringify({ status: "ok", configured: true, git, branch, session }));
+      res.end(JSON.stringify({ status: "ok", configured: true, git, branch, session, prompt }));
     } else {
       res.end(
-        JSON.stringify({ status: "error", configured: false, git, branch, session }),
+        JSON.stringify({ status: "error", configured: false, git, branch, session, prompt }),
       );
     }
   });

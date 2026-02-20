@@ -43,6 +43,8 @@ interface DeploySandboxOptions {
   timeoutMinutes?: number;
   /** User's .env variables to forward into the sandbox. */
   envVars?: Record<string, string>;
+  /** Initial prompt to auto-send in the chat UI on load. */
+  prompt?: string;
 }
 
 interface DeploySandboxResult {
@@ -228,6 +230,9 @@ export async function deploySandbox(
       envMap["VERCEL_TOKEN"] = opts.vercel.token;
       envMap["VERCEL_ORG_ID"] = opts.vercel.teamId;
       envMap["VERCEL_PROJECT_ID"] = opts.vercel.projectId;
+    }
+    if (opts.prompt) {
+      envMap["VIAGEN_PROMPT"] = opts.prompt;
     }
     const envLines = Object.entries(envMap).map(([k, v]) => `${k}=${v}`);
     await sandbox.writeFiles([

@@ -49,6 +49,9 @@ npx viagen sandbox --branch feature/my-thing
 # Set a longer timeout (default: 30 min)
 npx viagen sandbox --timeout 60
 
+# Auto-send a prompt on load
+npx viagen sandbox --prompt "build me a landing page"
+
 # Stop a running sandbox
 npx viagen sandbox stop <sandboxId>
 ```

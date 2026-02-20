@@ -589,7 +589,6 @@ export function buildUiHtml(opts?: {
     <div class="logs-list" id="logs-list"></div>
   </div>
   <script>
-    var STORAGE_KEY = 'viagen_chatLog';
     var SOUND_KEY = 'viagen_sound';
     var messagesEl = document.getElementById('messages');
     var inputEl = document.getElementById('input');
@@ -602,6 +601,8 @@ export function buildUiHtml(opts?: {
     var isStreaming = false;
     var chatLog = []; // Array of { type: 'user'|'text'|'tool'|'error'|'summary', content: string }
     var unloading = false;
+    var historyTimestamp = 0;
+    var historyPoll = null;
     var sendStartTime = 0;
     var toolCount = 0;
     var activityTimer = null;
@@ -678,29 +679,58 @@ export function buildUiHtml(opts?: {
       activityBar.classList.add('done');
       setTimeout(function() { activityBar.style.display = 'none'; }, 5000);
     }
-    window.addEventListener('beforeunload', function() { unloading = true; });
+    window.addEventListener('beforeunload', function() { unloading = true; stopHistoryPolling(); });
     window.addEventListener('pagehide', function() { unloading = true; });
     try { window.parent.addEventListener('beforeunload', function() { unloading = true; }); } catch(e) {}
 
-    function saveHistory() {
-      try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(chatLog)); } catch(e) {}
+    function appendHistoryEntries(entries) {
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i];
+        if (entry.timestamp) historyTimestamp = Math.max(historyTimestamp, entry.timestamp);
+        if (entry.role === 'user' && entry.type === 'message') {
+          chatLog.push({ type: 'user', content: entry.text });
+          renderUserMessage(entry.text);
+        } else if (entry.role === 'assistant' && entry.type === 'text') {
+          chatLog.push({ type: 'text', content: entry.text });
+          renderTextBlock(entry.text);
+        } else if (entry.role === 'assistant' && entry.type === 'tool_use') {
+          chatLog.push({ type: 'tool', content: entry.name });
+          renderToolBlock(entry.name);
+        }
+        // Skip 'result' entries — they duplicate the last text block
+      }
+      if (entries.length > 0) messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
-    function loadHistory() {
+    async function loadHistory() {
       try {
-        var saved = sessionStorage.getItem(STORAGE_KEY);
-        if (!saved) return;
-        chatLog = JSON.parse(saved);
-        for (var i = 0; i < chatLog.length; i++) {
-          var entry = chatLog[i];
-          if (entry.type === 'user') renderUserMessage(entry.content);
-          else if (entry.type === 'text') renderTextBlock(entry.content);
-          else if (entry.type === 'tool') renderToolBlock(entry.content);
-          else if (entry.type === 'tool_result') renderToolResult(entry.content);
-          else if (entry.type === 'error') renderErrorBlock(entry.content);
-        }
-        messagesEl.scrollTop = messagesEl.scrollHeight;
+        var res = await fetch('/via/chat/history');
+        var data = await res.json();
+        if (!data.entries || data.entries.length === 0) return;
+        chatLog = [];
+        messagesEl.innerHTML = '';
+        appendHistoryEntries(data.entries);
       } catch(e) {}
+    }
+
+    async function pollHistory() {
+      if (isStreaming) return;
+      try {
+        var res = await fetch('/via/chat/history?since=' + historyTimestamp);
+        var data = await res.json();
+        if (data.entries && data.entries.length > 0) {
+          appendHistoryEntries(data.entries);
+        }
+      } catch(e) {}
+    }
+
+    function startHistoryPolling() {
+      stopHistoryPolling();
+      historyPoll = setInterval(pollHistory, 1500);
+    }
+
+    function stopHistoryPolling() {
+      if (historyPoll) { clearInterval(historyPoll); historyPoll = null; }
     }
 
     function escapeHtml(text) {
@@ -826,7 +856,7 @@ export function buildUiHtml(opts?: {
 
     function addUserMessage(text) {
       chatLog.push({ type: 'user', content: text });
-      saveHistory();
+
       renderUserMessage(text);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -838,7 +868,7 @@ export function buildUiHtml(opts?: {
       } else {
         chatLog.push({ type: 'text', content: text });
       }
-      saveHistory();
+
 
       if (!currentTextSpan) {
         var div = document.createElement('div');
@@ -856,7 +886,7 @@ export function buildUiHtml(opts?: {
       currentTextSpan = null;
       var label = formatTool(name, input);
       chatLog.push({ type: 'tool', content: label });
-      saveHistory();
+
       renderToolBlock(label);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -877,13 +907,13 @@ export function buildUiHtml(opts?: {
 
     function addToolResult(text) {
       chatLog.push({ type: 'tool_result', content: text });
-      saveHistory();
+
       renderToolResult(text);
     }
 
     function addErrorBlock(text) {
       chatLog.push({ type: 'error', content: text });
-      saveHistory();
+
       renderErrorBlock(text);
       messagesEl.scrollTop = messagesEl.scrollHeight;
     }
@@ -893,6 +923,8 @@ export function buildUiHtml(opts?: {
       inputEl.disabled = v;
       sendBtn.disabled = v;
       sendBtn.textContent = v ? '...' : 'Send';
+      if (v) stopHistoryPolling();
+      else startHistoryPolling();
     }
 
     async function send() {
@@ -943,6 +975,8 @@ export function buildUiHtml(opts?: {
 
       hideActivity();
       playDoneSound();
+      // Advance timestamp so polling doesn't re-render messages from this stream
+      historyTimestamp = Date.now();
       setStreaming(false);
       inputEl.focus();
     }
@@ -954,7 +988,7 @@ export function buildUiHtml(opts?: {
     resetBtn.addEventListener('click', async function () {
       await fetch('/via/chat/reset', { method: 'POST' });
       chatLog = [];
-      saveHistory();
+
       messagesEl.innerHTML = '';
       currentTextSpan = null;
       inputEl.focus();
@@ -1014,7 +1048,7 @@ export function buildUiHtml(opts?: {
     // Health check — show status and disable input if not configured
     fetch('/via/health')
       .then(function(r) { return r.json(); })
-      .then(function(data) {
+      .then(async function(data) {
         var dot = document.getElementById('status-dot');
         var banner = document.getElementById('setup-banner');
         if (data.configured) {
@@ -1032,12 +1066,20 @@ export function buildUiHtml(opts?: {
           banner.innerHTML = 'Run <code>npx viagen setup</code> to configure auth, then restart the dev server.';
         }
         if (data.session) startSessionTimer(data.session.expiresAt);
+
+        // Load chat history from server (source of truth)
+        await loadHistory();
+        startHistoryPolling();
+
+        // Only auto-send prompt if no history exists (first boot)
+        if (data.prompt && data.configured && chatLog.length === 0) {
+          inputEl.value = data.prompt;
+          send();
+        }
       })
       .catch(function() {
         document.getElementById('status-dot').className = 'status-dot error';
       });
-
-    loadHistory();
 
     // ── Tab switching ──
     ${

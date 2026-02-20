@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { loadEnv, type Plugin } from "vite";
 import { LogBuffer, wrapLogger } from "./logger";
 import { registerHealthRoutes, type ViteError } from "./health";
-import { findClaudeBin, registerChatRoutes } from "./chat";
+import { findClaudeBin, registerChatRoutes, ChatSession } from "./chat";
 import { buildClientScript } from "./overlay";
 import { buildUiHtml } from "./ui";
 import { buildIframeHtml } from "./iframe";
@@ -163,8 +163,8 @@ export function viagen(options?: ViagenOptions): Plugin {
         get: () => lastError,
       });
 
-      // Chat routes
-      registerChatRoutes(server, {
+      // Chat session singleton — shared between routes and auto-prompt
+      const chatSession = new ChatSession({
         env,
         projectRoot,
         logBuffer,
@@ -172,6 +172,9 @@ export function viagen(options?: ViagenOptions): Plugin {
         claudeBin,
         systemPrompt: options?.systemPrompt,
       });
+
+      // Chat routes
+      registerChatRoutes(server, chatSession, { env });
 
       // File editor routes
       if (hasEditor) {
@@ -186,6 +189,17 @@ export function viagen(options?: ViagenOptions): Plugin {
 
       // Log routes (dev server logs)
       registerLogRoutes(server, { logBuffer });
+
+      // Auto-send initial prompt if VIAGEN_PROMPT is set (headless mode)
+      const initialPrompt = env["VIAGEN_PROMPT"];
+      if (initialPrompt) {
+        logBuffer.push("info", `[viagen] Auto-sending prompt: "${initialPrompt}"`);
+        chatSession.sendMessage(initialPrompt, (event) => {
+          if (event.type === "done") {
+            logBuffer.push("info", `[viagen] Prompt completed`);
+          }
+        });
+      }
 
       // Post-middleware: inject client script into SSR-rendered HTML
       // Runs after Vite's internal transformIndexHtml middleware

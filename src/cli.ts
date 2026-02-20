@@ -625,6 +625,7 @@ async function sandbox(args: string[]) {
   const branchOverride = parseFlag(args, "--branch") || parseFlag(args, "-b");
   const timeoutFlag = parseFlag(args, "--timeout") || parseFlag(args, "-t");
   const timeoutMinutes = timeoutFlag ? parseInt(timeoutFlag, 10) : undefined;
+  const prompt = parseFlag(args, "--prompt") || parseFlag(args, "-p");
 
   // Default: deploy sandbox
   const cwd = process.cwd();
@@ -833,6 +834,7 @@ async function sandbox(args: string[]) {
           }
         : undefined,
     timeoutMinutes,
+    prompt,
   });
 
   const iframeUrl = result.url.replace("?token=", "/via/iframe?token=");

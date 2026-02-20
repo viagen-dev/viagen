@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { createTestServer } from "./test-server";
-import { registerChatRoutes } from "./chat";
+import { registerChatRoutes, ChatSession } from "./chat";
 import { LogBuffer } from "./logger";
 import type { ViteDevServer } from "vite";
 
@@ -11,16 +14,18 @@ import type { ViteDevServer } from "vite";
  */
 describe("chat routes — validation", () => {
   const logBuffer = new LogBuffer();
+  const env: Record<string, string> = {}; // no API key
 
   const server = createTestServer((app) => {
     const fakeServer = { middlewares: app } as unknown as ViteDevServer;
-    registerChatRoutes(fakeServer, {
-      env: {}, // no API key
+    const session = new ChatSession({
+      env,
       projectRoot: "/tmp/fake",
       logBuffer,
       model: "sonnet",
       claudeBin: "/nonexistent/claude",
     });
+    registerChatRoutes(fakeServer, session, { env });
   });
 
   beforeAll(() => server.start());
@@ -55,16 +60,18 @@ describe("chat routes — validation", () => {
 
 describe("chat routes — body validation", () => {
   const logBuffer = new LogBuffer();
+  const env: Record<string, string> = { ANTHROPIC_API_KEY: "sk-test-key" };
 
   const server = createTestServer((app) => {
     const fakeServer = { middlewares: app } as unknown as ViteDevServer;
-    registerChatRoutes(fakeServer, {
-      env: { ANTHROPIC_API_KEY: "sk-test-key" },
+    const session = new ChatSession({
+      env,
       projectRoot: "/tmp/fake",
       logBuffer,
       model: "sonnet",
       claudeBin: "/nonexistent/claude",
     });
+    registerChatRoutes(fakeServer, session, { env });
   });
 
   beforeAll(() => server.start());
@@ -88,5 +95,59 @@ describe("chat routes — body validation", () => {
     });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'Missing "message" field' });
+  });
+});
+
+describe("chat routes — history", () => {
+  const logBuffer = new LogBuffer();
+  const env: Record<string, string> = {};
+  const projectRoot = join(tmpdir(), "viagen-test-" + Date.now());
+
+  const server = createTestServer((app) => {
+    const fakeServer = { middlewares: app } as unknown as ViteDevServer;
+    const session = new ChatSession({
+      env,
+      projectRoot,
+      logBuffer,
+      model: "sonnet",
+      claudeBin: "/nonexistent/claude",
+    });
+    registerChatRoutes(fakeServer, session, { env });
+  });
+
+  beforeAll(() => {
+    mkdirSync(join(projectRoot, ".viagen"), { recursive: true });
+    return server.start();
+  });
+
+  afterAll(async () => {
+    await server.stop();
+    rmSync(projectRoot, { recursive: true, force: true });
+  });
+
+  it("returns empty entries when no chat log exists", async () => {
+    const res = await fetch(`${server.url}/via/chat/history`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ entries: [] });
+  });
+
+  it("returns parsed entries from chat log", async () => {
+    const entries = [
+      { role: "user", type: "message", text: "hello", timestamp: 1000 },
+      { role: "assistant", type: "text", text: "hi there", timestamp: 1001 },
+      { role: "assistant", type: "tool_use", name: "Read", timestamp: 1002 },
+    ];
+    writeFileSync(
+      join(projectRoot, ".viagen", "chat.log"),
+      entries.map((e) => JSON.stringify(e)).join("\n") + "\n",
+    );
+
+    const res = await fetch(`${server.url}/via/chat/history`);
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { entries: typeof entries };
+    expect(data.entries).toHaveLength(3);
+    expect(data.entries[0]).toEqual(entries[0]);
+    expect(data.entries[1]).toEqual(entries[1]);
+    expect(data.entries[2]).toEqual(entries[2]);
   });
 });
