@@ -10,12 +10,15 @@ A Vite dev server plugin and CLI tool that enables you to use Claude Code in a s
 
 ## Quick Setup (Claude Code Plugin)
 
-Install viagen with a single command:
-
 ```
 /plugin marketplace add viagen-dev/viagen-claude-plugin
 /plugin install viagen@viagen-marketplace
-/viagen-setup
+```
+
+**Restart Claude Code to load the plugin.**
+
+```
+/viagen-install
 ```
 
 The plugin will handle npm installation, vite config updates, and run the setup wizard for you.

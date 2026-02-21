@@ -114,7 +114,7 @@
                 border: 1px solid var(--border);
                 border-radius: 8px;
                 padding: 16px 20px;
-                margin-bottom: 40px;
+                margin-bottom: 32px;
                 display: flex;
                 align-items: flex-start;
                 justify-content: space-between;
@@ -332,22 +332,31 @@
 
             <section>
                 <h2>Quick Setup (Claude Code Plugin)</h2>
+                <div class="install" style="margin-bottom: 8px">
+                    <code>/plugin marketplace add viagen-dev/viagen-claude-plugin
+/plugin install viagen@viagen-marketplace</code>
+                    <button
+                        onclick="navigator.clipboard.writeText('/plugin marketplace add viagen-dev/viagen-claude-plugin\n/plugin install viagen@viagen-marketplace').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})"
+                    >
+                        Copy
+                    </button>
+                </div>
                 <p
                     style="
                         font-size: 15px;
-                        color: var(--text-muted);
+                        color: var(--text);
                         line-height: 1.8;
-                        margin-bottom: 12px;
+                        margin: 0 0 14px;
                     "
                 >
-                    Install viagen with a single command:
+                    We recommend installing in the project scope, so Claude can
+                    use the skill. You have to <b>Restart Claude Code</b> to
+                    run:
                 </p>
-                <div class="install">
-                    <code>/plugin marketplace add viagen-dev/viagen-claude-plugin
-/plugin install viagen@viagen-marketplace
-/viagen-setup</code>
+                <div class="install" style="margin-bottom: 8px">
+                    <code>/viagen-install</code>
                     <button
-                        onclick="navigator.clipboard.writeText('/plugin marketplace add viagen-dev/viagen-claude-plugin\n/plugin install viagen@viagen-marketplace\n/viagen-setup').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})"
+                        onclick="navigator.clipboard.writeText('/viagen-install').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})"
                     >
                         Copy
                     </button>
