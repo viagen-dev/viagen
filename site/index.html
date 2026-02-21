@@ -467,40 +467,6 @@ npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
             </section>
 
             <section>
-                <h2>Step 4 — Sync</h2>
-                <div class="install">
-                    <code>npx viagen sync</code>
-                    <button
-                        onclick="navigator.clipboard.writeText('npx viagen sync').then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})"
-                    >
-                        Copy
-                    </button>
-                </div>
-                <p
-                    style="
-                        font-size: 15px;
-                        color: var(--text-muted);
-                        line-height: 1.8;
-                    "
-                >
-                    Pushes your local credentials (Claude Max tokens, GitHub
-                    token, Vercel config) to a platform project. Launch
-                    sandboxes from the web — use your Max subscription from any
-                    device without needing a browser redirect.
-                </p>
-                <p
-                    style="
-                        font-size: 15px;
-                        color: var(--text-muted);
-                        line-height: 1.8;
-                    "
-                >
-                    Claude tokens are refreshed automatically if expired before
-                    syncing. Requires <code>viagen login</code> first.
-                </p>
-            </section>
-
-            <section>
                 <h2>Vite Plugin Options</h2>
                 <pre><code>viagen({
   position: 'bottom-right',  // toggle button position

@@ -56,18 +56,6 @@ npx viagen sandbox --prompt "build me a landing page"
 npx viagen sandbox stop <sandboxId>
 ```
 
-## Step 4 — Sync
-
-```bash
-npx viagen sync
-```
-
-Pushes your local `.env` credentials (Claude Max tokens, GitHub token, Vercel config) to a platform project. This lets you launch sandboxes from the web — use your Max subscription from any device without needing a browser redirect.
-
-The first run prompts you to pick or create a project. After that, subsequent syncs target the same project automatically (stored as `VIAGEN_PROJECT_ID` in `.env`).
-
-Claude tokens are refreshed automatically if expired before syncing. Requires `viagen login` first.
-
 ## Plugin Options
 
 ```ts
