@@ -420,7 +420,7 @@ async function setup() {
   // Step 4: Vercel
   const hasVercel =
     existing["VERCEL_TOKEN"] &&
-    existing["VERCEL_TEAM_ID"] &&
+    existing["VERCEL_ORG_ID"] &&
     existing["VERCEL_PROJECT_ID"];
 
   if (hasVercel) {
@@ -464,8 +464,8 @@ async function setup() {
         orgId: string;
         projectId: string;
       };
-      if (!existing["VERCEL_TEAM_ID"]) {
-        newVars["VERCEL_TEAM_ID"] = project.orgId;
+      if (!existing["VERCEL_ORG_ID"]) {
+        newVars["VERCEL_ORG_ID"] = project.orgId;
       }
       if (!existing["VERCEL_PROJECT_ID"]) {
         newVars["VERCEL_PROJECT_ID"] = project.projectId;
@@ -510,7 +510,7 @@ async function setup() {
           orgId: string;
           projectId: string;
         };
-        if (!existing["VERCEL_TEAM_ID"]) newVars["VERCEL_TEAM_ID"] = project.orgId;
+        if (!existing["VERCEL_ORG_ID"]) newVars["VERCEL_ORG_ID"] = project.orgId;
         if (!existing["VERCEL_PROJECT_ID"]) newVars["VERCEL_PROJECT_ID"] = project.projectId;
       }
       if (!existing["VERCEL_TOKEN"]) {
@@ -675,7 +675,7 @@ async function sandbox(args: string[]) {
   const hasOidc = !!env["VERCEL_OIDC_TOKEN"];
   const hasToken =
     !!env["VERCEL_TOKEN"] &&
-    !!env["VERCEL_TEAM_ID"] &&
+    !!env["VERCEL_ORG_ID"] &&
     !!env["VERCEL_PROJECT_ID"];
 
   if (!hasOidc && !hasToken) {
@@ -826,10 +826,10 @@ async function sandbox(args: string[]) {
     overlayFiles,
     envVars: dotenv,
     vercel:
-      env["VERCEL_TOKEN"] && env["VERCEL_TEAM_ID"] && env["VERCEL_PROJECT_ID"]
+      env["VERCEL_TOKEN"] && env["VERCEL_ORG_ID"] && env["VERCEL_PROJECT_ID"]
         ? {
             token: env["VERCEL_TOKEN"],
-            teamId: env["VERCEL_TEAM_ID"],
+            teamId: env["VERCEL_ORG_ID"],
             projectId: env["VERCEL_PROJECT_ID"],
           }
         : undefined,
@@ -867,7 +867,7 @@ const SYNC_KEYS = [
   "ANTHROPIC_API_KEY",
   "GITHUB_TOKEN",
   "VERCEL_TOKEN",
-  "VERCEL_TEAM_ID",
+  "VERCEL_ORG_ID",
   "VERCEL_PROJECT_ID",
   "GIT_USER_NAME",
   "GIT_USER_EMAIL",
@@ -1334,7 +1334,7 @@ function help() {
     "  VERCEL_TOKEN           Vercel access token (for sandbox).",
   );
   console.log(
-    "  VERCEL_TEAM_ID         Vercel team ID (for sandbox).",
+    "  VERCEL_ORG_ID          Vercel org/team ID (for sandbox).",
   );
   console.log(
     "  VERCEL_PROJECT_ID      Vercel project ID (for sandbox).",

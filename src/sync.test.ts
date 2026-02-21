@@ -30,14 +30,14 @@ describe("gatherSyncSecrets", () => {
     const env = {
       GITHUB_TOKEN: "ghp_abc",
       VERCEL_TOKEN: "vercel-xyz",
-      VERCEL_TEAM_ID: "team_123",
+      VERCEL_ORG_ID: "team_123",
       VERCEL_PROJECT_ID: "prj_456",
     };
     const secrets = gatherSyncSecrets(env);
     expect(secrets).toEqual({
       GITHUB_TOKEN: "ghp_abc",
       VERCEL_TOKEN: "vercel-xyz",
-      VERCEL_TEAM_ID: "team_123",
+      VERCEL_ORG_ID: "team_123",
       VERCEL_PROJECT_ID: "prj_456",
     });
   });
@@ -83,7 +83,7 @@ describe("gatherSyncSecrets", () => {
       ANTHROPIC_API_KEY: "sk-ant-key",
       GITHUB_TOKEN: "ghp_token",
       VERCEL_TOKEN: "vtoken",
-      VERCEL_TEAM_ID: "team_id",
+      VERCEL_ORG_ID: "team_id",
       VERCEL_PROJECT_ID: "prj_id",
       GIT_USER_NAME: "User",
       GIT_USER_EMAIL: "user@test.com",
