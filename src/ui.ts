@@ -1062,8 +1062,19 @@ export function buildUiHtml(opts?: {
           inputEl.disabled = true;
           sendBtn.disabled = true;
           inputEl.placeholder = 'Not configured — run npx viagen setup';
+        }
+        // Show checklist banner if anything is missing
+        if (data.missing && data.missing.length > 0) {
           banner.style.display = 'block';
-          banner.innerHTML = 'Run <code>npx viagen setup</code> to configure auth, then restart the dev server.';
+          var items = data.missing.map(function(v) {
+            var isSet = data.missing.indexOf(v) === -1;
+            return '<div style="font-family:ui-monospace,monospace;font-size:11px;padding:1px 0;">' +
+              '<span style="color:' + (isSet ? '#22c55e' : '#ef4444') + ';margin-right:6px;">' + (isSet ? '&#10003;' : '&#10007;') + '</span>' +
+              '<span style="color:#a1a1aa;">' + escapeHtml(v) + '</span></div>';
+          });
+          banner.innerHTML = '<div style="margin-bottom:6px;">Missing environment variables:</div>' +
+            items.join('') +
+            '<div style="margin-top:8px;">Run <code>npx viagen setup</code> to configure, then restart.</div>';
         }
         if (data.session) startSessionTimer(data.session.expiresAt);
 

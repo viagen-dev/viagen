@@ -22,7 +22,20 @@ export function registerHealthRoutes(
     const configured =
       !!env["ANTHROPIC_API_KEY"] || !!env["CLAUDE_ACCESS_TOKEN"];
     const git = !!env["GITHUB_TOKEN"];
+    const vercel =
+      !!env["VERCEL_TOKEN"] &&
+      !!env["VERCEL_ORG_ID"] &&
+      !!env["VERCEL_PROJECT_ID"];
     const branch = env["VIAGEN_BRANCH"] || null;
+
+    // Build checklist of missing env vars
+    const missing: string[] = [];
+    if (!env["ANTHROPIC_API_KEY"] && !env["CLAUDE_ACCESS_TOKEN"])
+      missing.push("ANTHROPIC_API_KEY");
+    if (!env["GITHUB_TOKEN"]) missing.push("GITHUB_TOKEN");
+    if (!env["VERCEL_TOKEN"]) missing.push("VERCEL_TOKEN");
+    if (!env["VERCEL_ORG_ID"]) missing.push("VERCEL_ORG_ID");
+    if (!env["VERCEL_PROJECT_ID"]) missing.push("VERCEL_PROJECT_ID");
 
     // Session timing (sandbox only)
     const sessionStart = env["VIAGEN_SESSION_START"]
@@ -45,10 +58,10 @@ export function registerHealthRoutes(
     res.setHeader("Content-Type", "application/json");
 
     if (configured) {
-      res.end(JSON.stringify({ status: "ok", configured: true, git, branch, session, prompt }));
+      res.end(JSON.stringify({ status: "ok", configured: true, git, vercel, branch, session, prompt, missing }));
     } else {
       res.end(
-        JSON.stringify({ status: "error", configured: false, git, branch, session, prompt }),
+        JSON.stringify({ status: "error", configured: false, git, vercel, branch, session, prompt, missing }),
       );
     }
   });
