@@ -19,7 +19,7 @@ export interface ViagenOptions {
   position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
   /** Claude model to use. Default: 'sonnet' */
   model?: string;
-  /** Chat panel width in px. Default: 420 */
+  /** Chat panel width in px. Default: 375 */
   panelWidth?: number;
   /** Show "Fix This Error" button on Vite error overlay. Default: true */
   overlay?: boolean;
@@ -49,7 +49,7 @@ export function viagen(options?: ViagenOptions): Plugin {
   const opts = {
     position: options?.position ?? "bottom-right",
     model: options?.model ?? "sonnet",
-    panelWidth: options?.panelWidth ?? 420,
+    panelWidth: options?.panelWidth ?? 375,
     overlay: options?.overlay ?? true,
     ui: options?.ui ?? true,
   };

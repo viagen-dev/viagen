@@ -79,7 +79,7 @@ npx viagen sandbox stop <sandboxId>
 viagen({
   position: 'bottom-right',  // toggle button position
   model: 'sonnet',           // claude model
-  panelWidth: 420,           // chat panel width in px
+  panelWidth: 375,           // chat panel width in px
   overlay: true,             // fix button on error overlay
   ui: true,                  // inject chat panel into pages
   sandboxFiles: [...],       // copy files manually into sandbox
