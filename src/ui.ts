@@ -509,6 +509,9 @@ export function buildUiHtml(opts?: {
       text-align: center;
       margin-top: 40%;
     }
+    @media (max-width: 768px) {
+      #popout-btn { display: none !important; }
+    }
   </style>
 </head>
 <body>

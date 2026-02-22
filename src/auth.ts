@@ -20,24 +20,11 @@ export function createAuthMiddleware(token: string) {
     res: ServerResponse,
     next: NextFn,
   ) {
-    // 1. Check session cookie
-    if (req.headers.cookie) {
-      const cookies = parseCookies(req.headers.cookie);
-      if (cookies["viagen_session"] === token) {
-        next();
-        return;
-      }
-    }
-
-    // 2. Check Authorization header
-    const auth = req.headers.authorization;
-    if (auth && auth === `Bearer ${token}`) {
-      next();
-      return;
-    }
-
-    // 3. Check /t/:token path segment — set cookie and redirect
+    // 1. Strip /t/:token or ?token= from URL first — always redirect to clean
+    //    path so downstream middleware never sees the token segment (which
+    //    would 404 in Vite's static file serving).
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+
     const pathMatch = url.pathname.match(/^(.*)\/t\/([^/]+)$/);
     if (pathMatch && pathMatch[2] === token) {
       const cleanPath = pathMatch[1] || "/";
@@ -51,7 +38,6 @@ export function createAuthMiddleware(token: string) {
       return;
     }
 
-    // 4. Check ?token= query param (fallback) — set cookie and redirect
     const queryToken = url.searchParams.get("token");
     if (queryToken === token) {
       url.searchParams.delete("token");
@@ -62,6 +48,22 @@ export function createAuthMiddleware(token: string) {
       );
       res.writeHead(302, { Location: cleanUrl });
       res.end();
+      return;
+    }
+
+    // 2. Check session cookie
+    if (req.headers.cookie) {
+      const cookies = parseCookies(req.headers.cookie);
+      if (cookies["viagen_session"] === token) {
+        next();
+        return;
+      }
+    }
+
+    // 3. Check Authorization header
+    const auth = req.headers.authorization;
+    if (auth && auth === `Bearer ${token}`) {
+      next();
       return;
     }
 
