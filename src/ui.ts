@@ -697,8 +697,9 @@ export function buildUiHtml(opts?: {
           chatLog.push({ type: 'text', content: entry.text });
           renderTextBlock(entry.text);
         } else if (entry.role === 'assistant' && entry.type === 'tool_use') {
-          chatLog.push({ type: 'tool', content: entry.name });
-          renderToolBlock(entry.name);
+          var label = formatTool(entry.name, entry.input);
+          chatLog.push({ type: 'tool', content: label });
+          renderToolBlock(label);
         }
         // Skip 'result' entries — they duplicate the last text block
       }
@@ -812,14 +813,16 @@ export function buildUiHtml(opts?: {
     }
 
     function formatTool(name, input) {
+      var i = input || {};
       switch (name) {
-        case 'Read': return 'Reading ' + (input.file_path || '');
-        case 'Edit': return 'Editing ' + (input.file_path || '');
-        case 'Write': return 'Writing ' + (input.file_path || '');
-        case 'Bash': return '$ ' + (input.command || '');
-        case 'Glob': return 'Finding ' + (input.pattern || '');
-        case 'Grep': return 'Searching "' + (input.pattern || '') + '"';
-        default: return name + ': ' + JSON.stringify(input).slice(0, 80);
+        case 'Read': return i.file_path ? 'Reading ' + i.file_path : 'Read';
+        case 'Edit': return i.file_path ? 'Editing ' + i.file_path : 'Edit';
+        case 'Write': return i.file_path ? 'Writing ' + i.file_path : 'Write';
+        case 'Bash': return i.command ? '$ ' + i.command : 'Bash';
+        case 'Glob': return i.pattern ? 'Finding ' + i.pattern : 'Glob';
+        case 'Grep': return i.pattern ? 'Searching "' + i.pattern + '"' : 'Grep';
+        case 'Task': return i.description ? 'Task: ' + i.description : 'Task';
+        default: return name;
       }
     }
 

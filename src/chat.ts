@@ -210,7 +210,7 @@ export class ChatSession {
                   onEvent({ type: "text", text: block.text });
                 }
                 if (block.type === "tool_use") {
-                  session.chatLog({ role: "assistant", type: "tool_use", name: block.name });
+                  session.chatLog({ role: "assistant", type: "tool_use", name: block.name, input: block.input });
                   onEvent({ type: "tool_use", name: block.name, input: block.input });
                 }
               }
