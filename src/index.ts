@@ -172,6 +172,12 @@ export function viagen(options?: ViagenOptions): Plugin {
         res.end(buildUiHtml({ editable: hasEditor, git: true }));
       });
 
+      // App with chat overlay auto-opened
+      server.middlewares.use("/via/pop", (_req, res) => {
+        res.writeHead(302, { Location: "/?_viagen_chat" });
+        res.end();
+      });
+
       server.middlewares.use("/via/iframe", (_req, res) => {
         res.setHeader("Content-Type", "text/html");
         res.end(buildIframeHtml({ panelWidth: opts.panelWidth }));

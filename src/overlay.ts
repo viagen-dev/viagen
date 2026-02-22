@@ -198,7 +198,11 @@ export function buildClientScript(opts: {
     if (e.key === 'Escape' && panel.style.display !== 'none') setPanelOpen(false);
   });
 
-  try { if (sessionStorage.getItem(PANEL_KEY)) setPanelOpen(true); } catch(e) {}
+  if (new URLSearchParams(window.location.search).has('_viagen_chat')) {
+    setPanelOpen(true);
+  } else {
+    try { if (sessionStorage.getItem(PANEL_KEY)) setPanelOpen(true); } catch(e) {}
+  }
 })();
 `;
 }

@@ -840,11 +840,13 @@ async function sandbox(args: string[]) {
   const baseUrl = result.url.replace(/\/t\/.*$/, "");
   const iframeUrl = `${baseUrl}/via/iframe/t/${result.token}`;
   const chatUrl = `${baseUrl}/via/ui/t/${result.token}`;
+  const popUrl = `${baseUrl}/via/pop/t/${result.token}`;
 
   console.log("");
   console.log("Sandbox deployed!");
   console.log("");
   console.log(`  App:        ${result.url}`);
+  console.log(`  App + Chat: ${popUrl}`);
   console.log(`  Split view: ${iframeUrl}`);
   console.log(`  Chat only:  ${chatUrl}`);
   console.log("");
