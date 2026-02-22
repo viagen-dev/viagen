@@ -837,8 +837,9 @@ async function sandbox(args: string[]) {
     prompt,
   });
 
-  const iframeUrl = result.url.replace("?token=", "/via/iframe?token=");
-  const chatUrl = result.url.replace("?token=", "/via/ui?token=");
+  const baseUrl = result.url.replace(/\/t\/.*$/, "");
+  const iframeUrl = `${baseUrl}/via/iframe/t/${result.token}`;
+  const chatUrl = `${baseUrl}/via/ui/t/${result.token}`;
 
   console.log("");
   console.log("Sandbox deployed!");

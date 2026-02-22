@@ -36,8 +36,22 @@ export function createAuthMiddleware(token: string) {
       return;
     }
 
-    // 3. Check ?token= query param — set cookie and redirect
+    // 3. Check /t/:token path segment — set cookie and redirect
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+    const pathMatch = url.pathname.match(/^(.*)\/t\/([^/]+)$/);
+    if (pathMatch && pathMatch[2] === token) {
+      const cleanPath = pathMatch[1] || "/";
+      const cleanUrl = cleanPath + (url.search || "");
+      res.setHeader(
+        "Set-Cookie",
+        `viagen_session=${token}; HttpOnly; SameSite=Lax; Path=/; Secure`,
+      );
+      res.writeHead(302, { Location: cleanUrl });
+      res.end();
+      return;
+    }
+
+    // 4. Check ?token= query param (fallback) — set cookie and redirect
     const queryToken = url.searchParams.get("token");
     if (queryToken === token) {
       url.searchParams.delete("token");
@@ -51,7 +65,7 @@ export function createAuthMiddleware(token: string) {
       return;
     }
 
-    // 4. Unauthorized
+    // 5. Unauthorized
     res.statusCode = 401;
     res.setHeader("Content-Type", "application/json");
     res.end(JSON.stringify({ error: "Unauthorized" }));

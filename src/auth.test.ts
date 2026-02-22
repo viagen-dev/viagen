@@ -53,6 +53,48 @@ describe("auth middleware", () => {
     expect(res.status).toBe(401);
   });
 
+  it("redirects and sets cookie on /t/:token path", async () => {
+    const res = await fetch(`${server.url}/t/${TOKEN}`, {
+      redirect: "manual",
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/");
+
+    const setCookie = res.headers.get("Set-Cookie");
+    expect(setCookie).toContain(`viagen_session=${TOKEN}`);
+    expect(setCookie).toContain("HttpOnly");
+    expect(setCookie).toContain("SameSite=Lax");
+  });
+
+  it("redirects /via/iframe/t/:token to /via/iframe", async () => {
+    const res = await fetch(`${server.url}/via/iframe/t/${TOKEN}`, {
+      redirect: "manual",
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/via/iframe");
+  });
+
+  it("redirects /via/ui/t/:token to /via/ui", async () => {
+    const res = await fetch(`${server.url}/via/ui/t/${TOKEN}`, {
+      redirect: "manual",
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/via/ui");
+  });
+
+  it("preserves query params with /t/:token path", async () => {
+    const res = await fetch(`${server.url}/via/iframe/t/${TOKEN}?foo=bar`, {
+      redirect: "manual",
+    });
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("/via/iframe?foo=bar");
+  });
+
+  it("rejects invalid /t/:token path", async () => {
+    const res = await fetch(`${server.url}/t/wrong-token`);
+    expect(res.status).toBe(401);
+  });
+
   it("redirects and sets cookie on valid ?token= param", async () => {
     const res = await fetch(`${server.url}/some/path?token=${TOKEN}&other=1`, {
       redirect: "manual",

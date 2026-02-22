@@ -570,7 +570,11 @@ GET  /via/logs        — dev server log entries, optional ?since=&lt;timestamp&
                     <code style="font-size: 12px; color: var(--code-text)"
                         >Bearer</code
                     >
-                    header or
+                    header,
+                    <code style="font-size: 12px; color: var(--code-text)"
+                        >/t/:token</code
+                    >
+                    path segment, or
                     <code style="font-size: 12px; color: var(--code-text)"
                         >?token=</code
                     >
@@ -582,7 +586,10 @@ curl -X POST http://localhost:5173/via/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "add a hello world route"}'
 
-# Or pass the token as a query param (sets a session cookie)
+# Or pass the token in the URL path (sets a session cookie)
+open "http://localhost:5173/via/ui/t/$VIAGEN_AUTH_TOKEN"
+
+# ?token= query param also works (fallback)
 open "http://localhost:5173/via/ui?token=$VIAGEN_AUTH_TOKEN"</code></pre>
             </section>
 

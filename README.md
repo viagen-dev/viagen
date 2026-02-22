@@ -178,7 +178,7 @@ GET  /via/git/diff    — full diff, or single file with ?path=
 GET  /via/logs        — dev server log entries, optional ?since=<timestamp>
 ```
 
-When `VIAGEN_AUTH_TOKEN` is set (always on in sandboxes), pass the token as a `Bearer` header or `?token=` query param.
+When `VIAGEN_AUTH_TOKEN` is set (always on in sandboxes), pass the token as a `Bearer` header, a `/t/:token` path segment, or a `?token=` query param.
 
 ```bash
 # With curl
@@ -187,7 +187,10 @@ curl -X POST http://localhost:5173/via/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "add a hello world route"}'
 
-# Or pass the token as a query param (sets a session cookie)
+# Or pass the token in the URL path (sets a session cookie)
+open "http://localhost:5173/via/ui/t/$VIAGEN_AUTH_TOKEN"
+
+# ?token= query param also works (fallback for backwards compat)
 open "http://localhost:5173/via/ui?token=$VIAGEN_AUTH_TOKEN"
 ```
 

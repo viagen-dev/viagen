@@ -259,7 +259,7 @@ export async function deploySandbox(
     });
 
     const baseUrl = sandbox.domain(5173);
-    const url = `${baseUrl}?token=${token}`;
+    const url = `${baseUrl}/t/${token}`;
 
     return {
       url,
