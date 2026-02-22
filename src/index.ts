@@ -131,19 +131,19 @@ export function viagen(options?: ViagenOptions): Plugin {
         };
       }
 
-      // Force checkout GIT_BRANCH if set (sandbox mode, once only)
+      // Checkout GIT_BRANCH if set (sandbox mode, once only)
       const gitBranch = env["GIT_BRANCH"];
       if (gitBranch && !branchCheckedOut) {
         branchCheckedOut = true;
         try {
-          execSync(`git checkout -f ${gitBranch}`, {
+          execSync(`git checkout ${gitBranch}`, {
             cwd: projectRoot,
             stdio: "pipe",
           });
           logBuffer.push("info", `[viagen] Checked out branch: ${gitBranch}`);
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
-          logBuffer.push("error", `[viagen] Failed to checkout ${gitBranch}: ${msg}`);
+          logBuffer.push("warn", `[viagen] Could not checkout ${gitBranch} (dirty working tree?): ${msg}`);
         }
       }
 
