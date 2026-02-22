@@ -863,26 +863,24 @@ async function sandbox(args: string[]) {
 
 // ─── sync helpers ───────────────────────────────────────────────
 
-const SYNC_KEYS = [
-  "CLAUDE_ACCESS_TOKEN",
-  "CLAUDE_REFRESH_TOKEN",
-  "CLAUDE_TOKEN_EXPIRES",
-  "ANTHROPIC_API_KEY",
-  "GITHUB_TOKEN",
-  "VERCEL_TOKEN",
-  "VERCEL_ORG_ID",
-  "VERCEL_PROJECT_ID",
-  "GIT_USER_NAME",
-  "GIT_USER_EMAIL",
-] as const;
+/** Keys that are local-only and should never be synced to the platform. */
+const SYNC_DENY_KEYS = new Set([
+  "VIAGEN_PROJECT_ID",
+  "VIAGEN_PLATFORM_URL",
+  "INFISICAL_CLIENT_ID",
+  "INFISICAL_CLIENT_SECRET",
+  "INFISICAL_PROJECT_ID",
+]);
 
-/** Gather credentials from env vars to sync as project secrets. */
+/** Gather all env vars to sync as project secrets (minus local-only keys). */
 export function gatherSyncSecrets(
   env: Record<string, string>,
 ): Record<string, string> {
   const secrets: Record<string, string> = {};
-  for (const key of SYNC_KEYS) {
-    if (env[key]) secrets[key] = env[key];
+  for (const [key, value] of Object.entries(env)) {
+    if (value && !SYNC_DENY_KEYS.has(key)) {
+      secrets[key] = value;
+    }
   }
   return secrets;
 }
@@ -957,30 +955,25 @@ async function sync() {
     process.exit(1);
   }
 
-  // Refresh Claude tokens if expired before syncing
+  // Try to refresh Claude tokens if expired — but don't block sync on failure.
+  // The platform handles expired token fallback in its own resolution logic.
   if (secrets["CLAUDE_ACCESS_TOKEN"] && env["CLAUDE_REFRESH_TOKEN"]) {
     const expires = parseInt(env["CLAUDE_TOKEN_EXPIRES"] || "0", 10);
     const nowSec = Math.floor(Date.now() / 1000);
     if (nowSec > expires - 300) {
-      console.log("Refreshing Claude tokens...");
       try {
         const tokens = await refreshAccessToken(env["CLAUDE_REFRESH_TOKEN"]);
         secrets["CLAUDE_ACCESS_TOKEN"] = tokens.access_token;
         secrets["CLAUDE_REFRESH_TOKEN"] = tokens.refresh_token;
         secrets["CLAUDE_TOKEN_EXPIRES"] = String(nowSec + tokens.expires_in);
-        // Persist refreshed tokens locally
         updateEnvVars(cwd, {
           CLAUDE_ACCESS_TOKEN: tokens.access_token,
           CLAUDE_REFRESH_TOKEN: tokens.refresh_token,
           CLAUDE_TOKEN_EXPIRES: String(nowSec + tokens.expires_in),
         });
-        console.log("  Tokens refreshed.");
-      } catch (err) {
-        console.error(
-          "Failed to refresh Claude tokens. Run `viagen setup` to re-authenticate.",
-        );
-        console.error(`  ${err instanceof Error ? err.message : String(err)}`);
-        process.exit(1);
+        console.log("Claude tokens refreshed.");
+      } catch {
+        console.log("Claude OAuth tokens expired (will sync as-is).");
       }
     }
   }
@@ -1050,6 +1043,12 @@ async function sync() {
   console.log(
     `Synced "${result.project.name}" — ${result.secrets.stored} secrets stored.`,
   );
+  if (result.secrets.failed && result.secrets.failed.length > 0) {
+    console.log(`  Failed (${result.secrets.failed.length}): ${result.secrets.failed.join(", ")}`);
+  }
+  if (result.resolvedKeys) {
+    console.log(`  Resolved: ${result.resolvedKeys.length} keys available`);
+  }
   console.log("You can now launch sandboxes from the web platform.");
 }
 

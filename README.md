@@ -124,28 +124,9 @@ viagen({
 
 Paths can be files or directories (directories include all files within). The editor appears as a "Files" tab in the chat panel.
 
-The default system prompt:
+The default system prompt tells Claude it's embedded in a Vite dev server, that file edits trigger HMR, and how to check server logs. Recent build errors are automatically appended to give Claude context about what went wrong.
 
-```
-You are embedded in a Vite dev server as the "viagen" plugin. Your job is to
-help build and modify the app. Files you edit will trigger Vite HMR
-automatically. You can read .viagen/server.log to check recent Vite dev server
-output (compile errors, HMR updates, warnings). When running in a sandbox with
-git, the gh CLI is available and authenticated — you can create pull requests,
-comment on issues, and manage releases.
-
-Publishing workflow:
-- If you are on a feature branch (not main/master): commit your changes, push
-  to the remote, and create a pull request using "gh pr create". Share the PR URL.
-- If you are on main/master and Vercel credentials are set ($VERCEL_TOKEN):
-  commit, push, and run "vercel deploy" to publish a preview. Share the preview URL.
-- Check your current branch with "git branch --show-current" before deciding
-  which workflow to use.
-
-Be concise.
-```
-
-Recent build errors are automatically appended to give Claude context about what went wrong. To customize the prompt, you can replace it entirely or extend the default:
+To customize the prompt, you can replace it entirely or extend the default:
 
 ```ts
 import { viagen, DEFAULT_SYSTEM_PROMPT } from 'viagen'

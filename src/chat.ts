@@ -1,6 +1,11 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import { createRequire } from "node:module";
-import { readFileSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  appendFileSync,
+  existsSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
@@ -18,14 +23,12 @@ function readBody(req: IncomingMessage): Promise<string> {
   });
 }
 
-export const DEFAULT_SYSTEM_PROMPT = `You are embedded in a Vite dev server as the "viagen" plugin. Your job is to help build and modify the app. Files you edit will trigger Vite HMR automatically. You can read .viagen/server.log to check recent Vite dev server output (compile errors, HMR updates, warnings). When running in a sandbox with git, the gh CLI is available and authenticated — you can create pull requests, comment on issues, and manage releases.
-
-Publishing workflow:
-- If you are on a feature branch (not main/master): First, ensure you are working in the git root directory. Commit your changes, push to the remote, and create a pull request using "gh pr create". Share the PR URL.
-- If you are on main/master and Vercel credentials are set ($VERCEL_TOKEN): commit, push, and run "vercel deploy --yes" to publish a preview. Share the preview URL. If vercel is not configured correctly. Skip this step.
-- Check your current branch with "git branch --show-current" before deciding which workflow to use.
-
-Be concise.`;
+export const DEFAULT_SYSTEM_PROMPT = `
+  You are embedded in a Vite dev server as the "viagen" plugin.
+  Your job is to help build and modify the app. Files you edit will trigger Vite HMR automatically.
+  You can read .viagen/server.log to check recent Vite dev server output (compile errors, HMR updates, warnings).
+  Be concise.
+`;
 
 export function findClaudeBin(): string {
   const _require = createRequire(import.meta.url);
@@ -107,7 +110,9 @@ export class ChatSession {
         );
         this.opts.env["CLAUDE_ACCESS_TOKEN"] = tokens.access_token;
         this.opts.env["CLAUDE_REFRESH_TOKEN"] = tokens.refresh_token;
-        this.opts.env["CLAUDE_TOKEN_EXPIRES"] = String(nowSec + tokens.expires_in);
+        this.opts.env["CLAUDE_TOKEN_EXPIRES"] = String(
+          nowSec + tokens.expires_in,
+        );
 
         const envPath = join(this.opts.projectRoot, ".env");
         if (existsSync(envPath)) {
@@ -175,7 +180,8 @@ export class ChatSession {
     if (hasApiKey) {
       childEnv["ANTHROPIC_API_KEY"] = this.opts.env["ANTHROPIC_API_KEY"];
     } else if (hasOAuthToken) {
-      childEnv["CLAUDE_CODE_OAUTH_TOKEN"] = this.opts.env["CLAUDE_ACCESS_TOKEN"];
+      childEnv["CLAUDE_CODE_OAUTH_TOKEN"] =
+        this.opts.env["CLAUDE_ACCESS_TOKEN"];
     }
 
     const child: ChildProcess = spawn("node", args, {
@@ -206,12 +212,25 @@ export class ChatSession {
             if (msg.type === "assistant" && msg.message?.content) {
               for (const block of msg.message.content) {
                 if (block.type === "text" && block.text) {
-                  session.chatLog({ role: "assistant", type: "text", text: block.text });
+                  session.chatLog({
+                    role: "assistant",
+                    type: "text",
+                    text: block.text,
+                  });
                   onEvent({ type: "text", text: block.text });
                 }
                 if (block.type === "tool_use") {
-                  session.chatLog({ role: "assistant", type: "tool_use", name: block.name, input: block.input });
-                  onEvent({ type: "tool_use", name: block.name, input: block.input });
+                  session.chatLog({
+                    role: "assistant",
+                    type: "tool_use",
+                    name: block.name,
+                    input: block.input,
+                  });
+                  onEvent({
+                    type: "tool_use",
+                    name: block.name,
+                    input: block.input,
+                  });
                 }
               }
             }
@@ -226,7 +245,11 @@ export class ChatSession {
 
             if (msg.type === "result") {
               if (msg.result) {
-                session.chatLog({ role: "assistant", type: "result", text: msg.result });
+                session.chatLog({
+                  role: "assistant",
+                  type: "result",
+                  text: msg.result,
+                });
                 onEvent({ type: "text", text: msg.result });
               }
               onEvent({ type: "done" });

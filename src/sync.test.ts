@@ -2,93 +2,67 @@ import { describe, it, expect } from "vitest";
 import { gatherSyncSecrets } from "./cli";
 
 describe("gatherSyncSecrets", () => {
-  it("returns empty object when no credentials in env", () => {
+  it("returns empty object when env is empty", () => {
     expect(gatherSyncSecrets({})).toEqual({});
   });
 
-  it("includes Claude Max tokens when all three are present", () => {
+  it("syncs all env vars with values", () => {
     const env = {
-      CLAUDE_ACCESS_TOKEN: "access-123",
-      CLAUDE_REFRESH_TOKEN: "refresh-456",
-      CLAUDE_TOKEN_EXPIRES: "1700000000",
+      ANTHROPIC_API_KEY: "sk-ant-abc123",
+      GITHUB_TOKEN: "ghp_abc",
+      DATABASE_URL: "postgres://localhost/mydb",
+      MY_CUSTOM_VAR: "hello",
     };
-    const secrets = gatherSyncSecrets(env);
-    expect(secrets).toEqual({
-      CLAUDE_ACCESS_TOKEN: "access-123",
-      CLAUDE_REFRESH_TOKEN: "refresh-456",
-      CLAUDE_TOKEN_EXPIRES: "1700000000",
-    });
+    expect(gatherSyncSecrets(env)).toEqual(env);
   });
 
-  it("includes ANTHROPIC_API_KEY when present", () => {
-    const env = { ANTHROPIC_API_KEY: "sk-ant-abc123" };
-    const secrets = gatherSyncSecrets(env);
-    expect(secrets).toEqual({ ANTHROPIC_API_KEY: "sk-ant-abc123" });
-  });
-
-  it("includes GitHub and Vercel tokens when present", () => {
+  it("omits empty values", () => {
     const env = {
       GITHUB_TOKEN: "ghp_abc",
-      VERCEL_TOKEN: "vercel-xyz",
-      VERCEL_ORG_ID: "team_123",
-      VERCEL_PROJECT_ID: "prj_456",
+      EMPTY_VAR: "",
     };
-    const secrets = gatherSyncSecrets(env);
-    expect(secrets).toEqual({
+    expect(gatherSyncSecrets(env)).toEqual({ GITHUB_TOKEN: "ghp_abc" });
+  });
+
+  it("excludes VIAGEN_PROJECT_ID (local-only)", () => {
+    const env = {
+      VIAGEN_PROJECT_ID: "proj_123",
       GITHUB_TOKEN: "ghp_abc",
-      VERCEL_TOKEN: "vercel-xyz",
-      VERCEL_ORG_ID: "team_123",
-      VERCEL_PROJECT_ID: "prj_456",
-    });
-  });
-
-  it("includes git user info when present", () => {
-    const env = {
-      GIT_USER_NAME: "Ben",
-      GIT_USER_EMAIL: "ben@example.com",
     };
-    const secrets = gatherSyncSecrets(env);
-    expect(secrets).toEqual({
-      GIT_USER_NAME: "Ben",
-      GIT_USER_EMAIL: "ben@example.com",
-    });
+    expect(gatherSyncSecrets(env)).toEqual({ GITHUB_TOKEN: "ghp_abc" });
   });
 
-  it("omits keys that are missing", () => {
+  it("excludes VIAGEN_PLATFORM_URL (local-only)", () => {
     const env = {
+      VIAGEN_PLATFORM_URL: "https://platform.viagen.dev",
       GITHUB_TOKEN: "ghp_abc",
-      // No Claude, no Vercel
     };
-    const secrets = gatherSyncSecrets(env);
-    expect(secrets).toEqual({ GITHUB_TOKEN: "ghp_abc" });
-    expect(secrets).not.toHaveProperty("CLAUDE_ACCESS_TOKEN");
-    expect(secrets).not.toHaveProperty("VERCEL_TOKEN");
+    expect(gatherSyncSecrets(env)).toEqual({ GITHUB_TOKEN: "ghp_abc" });
   });
 
-  it("omits keys with empty values", () => {
+  it("excludes Infisical credentials (local-only)", () => {
     const env = {
+      INFISICAL_CLIENT_ID: "inf-id",
+      INFISICAL_CLIENT_SECRET: "inf-secret",
+      INFISICAL_PROJECT_ID: "inf-proj",
       GITHUB_TOKEN: "ghp_abc",
-      VERCEL_TOKEN: "",
-      ANTHROPIC_API_KEY: "",
     };
-    const secrets = gatherSyncSecrets(env);
-    expect(secrets).toEqual({ GITHUB_TOKEN: "ghp_abc" });
+    expect(gatherSyncSecrets(env)).toEqual({ GITHUB_TOKEN: "ghp_abc" });
   });
 
-  it("gathers all credentials when everything is set", () => {
+  it("excludes all deny-listed keys together", () => {
     const env = {
-      CLAUDE_ACCESS_TOKEN: "access",
-      CLAUDE_REFRESH_TOKEN: "refresh",
-      CLAUDE_TOKEN_EXPIRES: "9999999999",
+      VIAGEN_PROJECT_ID: "proj_123",
+      VIAGEN_PLATFORM_URL: "https://platform.viagen.dev",
+      INFISICAL_CLIENT_ID: "inf-id",
+      INFISICAL_CLIENT_SECRET: "inf-secret",
+      INFISICAL_PROJECT_ID: "inf-proj",
       ANTHROPIC_API_KEY: "sk-ant-key",
-      GITHUB_TOKEN: "ghp_token",
-      VERCEL_TOKEN: "vtoken",
-      VERCEL_ORG_ID: "team_id",
-      VERCEL_PROJECT_ID: "prj_id",
-      GIT_USER_NAME: "User",
-      GIT_USER_EMAIL: "user@test.com",
+      MY_APP_SECRET: "s3cret",
     };
-    const secrets = gatherSyncSecrets(env);
-    expect(Object.keys(secrets)).toHaveLength(10);
+    expect(gatherSyncSecrets(env)).toEqual({
+      ANTHROPIC_API_KEY: "sk-ant-key",
+      MY_APP_SECRET: "s3cret",
+    });
   });
 });
