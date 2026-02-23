@@ -1,6 +1,6 @@
 {
   "name": "viagen",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "Vite dev server plugin that exposes endpoints for chatting with Claude Code SDK",
   "type": "module",
   "main": "./dist/index.js",
@@ -43,7 +43,7 @@
     "@vercel/sandbox": "^1",
     "lucide-react": "^0.564.0",
     "simple-git": "^3.31.1",
-    "viagen-sdk": "^0.0.1"
+    "viagen-sdk": "^0.0.2"
   },
   "license": "MIT",
   "repository": {

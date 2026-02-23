@@ -1140,9 +1140,10 @@ async function whoami() {
     if (user) {
       console.log(`${user.email}${user.name ? ` (${user.name})` : ""}`);
       if (user.organizations.length > 0) {
-        console.log(
-          `Orgs: ${user.organizations.map((o) => o.name).join(", ")}`,
+        const teams = user.organizations.map((o) =>
+          o.id === existing.orgId ? `${o.name} (active)` : o.name,
         );
+        console.log(`Teams: ${teams.join(", ")}`);
       }
     } else {
       console.log("Session expired. Run `viagen login` to re-authenticate.");
@@ -1162,7 +1163,46 @@ async function requireClient(): Promise<ViagenClient> {
     console.error("Not logged in. Run `viagen login` first.");
     process.exit(1);
   }
-  return createViagen({ baseUrl: creds.baseUrl, token: creds.token });
+  return createViagen({ baseUrl: creds.baseUrl, token: creds.token, orgId: creds.orgId });
+}
+
+// ─── teams command ──────────────────────────────────────────────
+
+async function teams() {
+  const client = await requireClient();
+  const memberships = (await client.orgs.list()) ?? [];
+
+  if (memberships.length === 0) {
+    console.log("No teams. Create one with `viagen orgs create <name>`.");
+    return;
+  }
+
+  const creds = (await loadCredentials())!;
+
+  if (memberships.length === 1) {
+    console.log(`You're in "${memberships[0].name}" (only team).`);
+    return;
+  }
+
+  console.log("Your teams:");
+  console.log("");
+  for (let i = 0; i < memberships.length; i++) {
+    const active = memberships[i].id === creds.orgId ? " (active)" : "";
+    console.log(`  ${i + 1}) ${memberships[i].name}${active}`);
+  }
+  console.log("");
+
+  const choice = await promptUser("Switch to: ");
+  const idx = parseInt(choice, 10) - 1;
+
+  if (idx < 0 || idx >= memberships.length) {
+    console.log("Cancelled.");
+    return;
+  }
+
+  const selected = memberships[idx];
+  await saveCredentials({ ...creds, orgId: selected.id });
+  console.log(`Switched to "${selected.name}".`);
 }
 
 // ─── orgs command ────────────────────────────────────────────────
@@ -1283,6 +1323,7 @@ function help() {
   console.log("  login                          Log in to the viagen platform");
   console.log("  logout                         Log out and remove credentials");
   console.log("  whoami                         Show current user");
+  console.log("  teams                          Switch active team");
   console.log("  orgs                           List your organizations");
   console.log("  orgs create <name>             Create a new organization");
   console.log("  orgs invite <email>            Invite a member to the org");
@@ -1357,6 +1398,8 @@ async function main() {
     await logout();
   } else if (command === "whoami") {
     await whoami();
+  } else if (command === "teams") {
+    await teams();
   } else if (command === "orgs") {
     await orgs(args.slice(1));
   } else if (command === "projects") {
