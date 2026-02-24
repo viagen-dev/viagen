@@ -64,16 +64,23 @@
                 padding: 80px 24px 48px;
                 position: relative;
             }
+            @keyframes gradient-shift {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
             h1 {
                 font-family: ui-monospace, monospace;
                 font-size: 32px;
                 font-weight: 700;
                 letter-spacing: -0.02em;
                 margin-bottom: 4px;
-                background: linear-gradient(135deg, #a855f7 0%, #3b82f6 50%, #06b6d4 100%);
+                background: linear-gradient(135deg, #f43f5e, #a855f7, #3b82f6, #06b6d4, #a855f7, #f43f5e);
+                background-size: 300% 300%;
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
                 background-clip: text;
+                animation: gradient-shift 6s ease infinite;
             }
             .etymology {
                 font-family: ui-monospace, monospace;
