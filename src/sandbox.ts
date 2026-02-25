@@ -101,6 +101,72 @@ function extractHost(httpsUrl: string): string {
   }
 }
 
+/**
+ * Wait for the dev server to respond or capture early failure output.
+ * Polls the base URL for up to 60 seconds while streaming logs.
+ */
+async function waitForServer(
+  baseUrl: string,
+  devServer: { exitCode: number | null; logs(opts?: { signal?: AbortSignal }): AsyncIterable<{ data: string; stream: string }> },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const timeout = 60_000;
+  const start = Date.now();
+  const ac = new AbortController();
+  let serverOutput = "";
+
+  // Stream dev server logs in the background
+  const logStream = (async () => {
+    try {
+      for await (const log of devServer.logs({ signal: ac.signal })) {
+        const line = log.data;
+        serverOutput += line;
+        if (log.stream === "stderr") {
+          process.stderr.write(`  ${line}`);
+        } else {
+          process.stdout.write(`  ${line}`);
+        }
+      }
+    } catch {
+      // Stream closed or aborted — expected
+    }
+  })();
+
+  // Poll until server responds
+  while (Date.now() - start < timeout) {
+    // Check if the process exited (crashed)
+    if (devServer.exitCode !== null) {
+      ac.abort();
+      await logStream.catch(() => {});
+      return {
+        ok: false,
+        error: serverOutput.slice(-2000) || `Process exited with code ${devServer.exitCode}`,
+      };
+    }
+
+    try {
+      const res = await fetch(`${baseUrl}/via/health`, {
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        ac.abort();
+        await logStream.catch(() => {});
+        return { ok: true };
+      }
+    } catch {
+      // Not ready yet
+    }
+
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+
+  ac.abort();
+  await logStream.catch(() => {});
+  return {
+    ok: false,
+    error: serverOutput.slice(-2000) || "Timed out waiting for dev server",
+  };
+}
+
 export async function deploySandbox(
   opts: DeploySandboxOptions,
 ): Promise<DeploySandboxResult> {
@@ -167,7 +233,11 @@ export async function deploySandbox(
       // Ensure we're on the branch (not detached HEAD).
       // Vercel clones at a specific commit hash, so the local branch doesn't
       // exist yet — use -B to create it at the current HEAD.
-      await sandbox.runCommand("git", ["checkout", "-B", opts.git.branch]);
+      const checkout = await sandbox.runCommand("git", ["checkout", "-B", opts.git.branch]);
+      if (checkout.exitCode !== 0) {
+        const err = await checkout.stderr();
+        throw new Error(`git checkout failed (exit ${checkout.exitCode}): ${err}`);
+      }
 
       // Configure credential helper so Claude can push
       // Use global config + home dir so it works regardless of cwd
@@ -242,24 +312,37 @@ export async function deploySandbox(
       },
     ]);
 
-    // Install dependencies
-    const install = await sandbox.runCommand("npm", ["install"]);
+    // Install dependencies — stream output so errors are visible
+    console.log("  Installing dependencies...");
+    const install = await sandbox.runCommand({
+      cmd: "npm",
+      args: ["install"],
+      stdout: process.stdout,
+      stderr: process.stderr,
+    });
     if (install.exitCode !== 0) {
-      const stderr = await install.stderr();
-      throw new Error(
-        `npm install failed (exit ${install.exitCode}): ${stderr}`,
-      );
+      throw new Error(`npm install failed (exit ${install.exitCode})`);
     }
 
     // Start dev server (detached so it runs in background)
-    await sandbox.runCommand({
+    const devServer = await sandbox.runCommand({
       cmd: "npm",
       args: ["run", "dev", "--", "--host", "0.0.0.0"],
       detached: true,
     });
 
+    // Stream initial dev server output to catch startup errors
+    console.log("  Starting dev server...");
     const baseUrl = sandbox.domain(5173);
     const url = `${baseUrl}/t/${token}`;
+
+    // Wait for the dev server to be ready or fail
+    const ready = await waitForServer(baseUrl, devServer);
+    if (!ready.ok) {
+      throw new Error(
+        `Dev server failed to start: ${ready.error}`,
+      );
+    }
 
     return {
       url,
