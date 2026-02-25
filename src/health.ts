@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ViteDevServer } from "vite";
 
 export interface ViteError {
@@ -64,5 +66,77 @@ export function registerHealthRoutes(
         JSON.stringify({ status: "error", configured: false, git, vercel, branch, session, prompt, missing }),
       );
     }
+  });
+
+  // GET /via/version — current version + check for updates
+  let currentVersion: string | null = null;
+  let versionCache: { latest: string; ts: number } | null = null;
+
+  function getCurrentVersion(): string {
+    if (currentVersion) return currentVersion;
+    try {
+      const pkg = JSON.parse(
+        readFileSync(join(__dirname, "..", "package.json"), "utf-8"),
+      );
+      currentVersion = pkg.version;
+    } catch {
+      try {
+        // Fallback: bundled — try require.resolve
+        const pkg = JSON.parse(
+          readFileSync(
+            join(__dirname, "package.json"),
+            "utf-8",
+          ),
+        );
+        currentVersion = pkg.version;
+      } catch {
+        currentVersion = "0.0.0";
+      }
+    }
+    return currentVersion!;
+  }
+
+  server.middlewares.use("/via/version", (_req, res) => {
+    res.setHeader("Content-Type", "application/json");
+
+    const current = getCurrentVersion();
+
+    // Return cached if fresh (5 min)
+    if (versionCache && Date.now() - versionCache.ts < 300_000) {
+      res.end(
+        JSON.stringify({
+          current,
+          latest: versionCache.latest,
+          updateAvailable: versionCache.latest !== current,
+        }),
+      );
+      return;
+    }
+
+    fetch("https://registry.npmjs.org/viagen/latest", {
+      headers: { Accept: "application/json" },
+    })
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        const latest =
+          (data as { version?: string }).version ?? current;
+        versionCache = { latest, ts: Date.now() };
+        res.end(
+          JSON.stringify({
+            current,
+            latest,
+            updateAvailable: latest !== current,
+          }),
+        );
+      })
+      .catch(() => {
+        res.end(
+          JSON.stringify({
+            current,
+            latest: null,
+            updateAvailable: false,
+          }),
+        );
+      });
   });
 }

@@ -71,6 +71,30 @@ export function buildUiHtml(opts?: {
       color: #d4d4d8;
       font-size: 11px;
     }
+    .update-banner {
+      padding: 6px 12px;
+      border-bottom: 1px solid #27272a;
+      background: #18181b;
+      font-family: ui-monospace, monospace;
+      font-size: 11px;
+      color: #a1a1aa;
+      flex-shrink: 0;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .update-banner:hover { background: #1e1e22; }
+    .update-banner .update-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: #365314;
+      color: #86efac;
+      text-transform: uppercase;
+    }
     .btn {
       padding: 5px 10px;
       border: 1px solid #3f3f46;
@@ -501,6 +525,7 @@ export function buildUiHtml(opts?: {
   }
   <div id="chat-view" style="display:flex;flex-direction:column;flex:1;overflow:hidden;">
     <div class="setup-banner" id="setup-banner"></div>
+    <div class="update-banner" id="update-banner"><span class="update-badge">update</span><span id="update-text"></span></div>
     <div class="activity-bar" id="activity-bar"></div>
     <div class="messages" id="messages"></div>
     <div class="input-area">
@@ -1120,6 +1145,23 @@ export function buildUiHtml(opts?: {
             }
           }).catch(function() {});
         }
+
+        // Check for viagen updates
+        fetch('/via/version').then(function(r) { return r.json(); }).then(function(v) {
+          if (v.updateAvailable && v.latest) {
+            var updateBanner = document.getElementById('update-banner');
+            var updateText = document.getElementById('update-text');
+            if (updateBanner && updateText) {
+              updateText.textContent = 'viagen ' + v.latest + ' available (current: ' + v.current + ')';
+              updateBanner.style.display = 'flex';
+              updateBanner.addEventListener('click', function() {
+                updateBanner.style.display = 'none';
+                inputEl.value = 'Update viagen to v' + v.latest + ' (npm install viagen@' + v.latest + ') and restart the dev server.';
+                send();
+              });
+            }
+          }
+        }).catch(function() {});
 
         // Only auto-send prompt if no history exists (first boot)
         if (data.prompt && data.configured && chatLog.length === 0) {
