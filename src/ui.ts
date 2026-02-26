@@ -625,6 +625,12 @@ export function buildUiHtml(opts?: {
       } catch(e) {}
     }
 
+    function scrollToBottom() {
+      requestAnimationFrame(function() {
+        scrollToBottom();
+      });
+    }
+
     function formatDuration(ms) {
       if (ms < 1000) return ms + 'ms';
       var secs = Math.round(ms / 1000);
@@ -867,7 +873,7 @@ export function buildUiHtml(opts?: {
       chatLog.push({ type: 'user', content: text });
 
       renderUserMessage(text);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      scrollToBottom();
     }
 
     function appendText(text) {
@@ -888,7 +894,7 @@ export function buildUiHtml(opts?: {
       }
       var fullText = chatLog[chatLog.length - 1].content;
       currentTextSpan.innerHTML = renderMarkdown(fullText);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      scrollToBottom();
     }
 
     function addToolBlock(name, input) {
@@ -897,7 +903,7 @@ export function buildUiHtml(opts?: {
       chatLog.push({ type: 'tool', content: label });
 
       renderToolBlock(label);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      scrollToBottom();
     }
 
     function renderToolResult(text) {
@@ -924,7 +930,7 @@ export function buildUiHtml(opts?: {
       chatLog.push({ type: 'error', content: text });
 
       renderErrorBlock(text);
-      messagesEl.scrollTop = messagesEl.scrollHeight;
+      scrollToBottom();
     }
 
     function setStreaming(v) {
@@ -991,6 +997,7 @@ export function buildUiHtml(opts?: {
       sendStartTime = Date.now();
       toolCount = 0;
       showActivity();
+      scrollToBottom();
 
       await sendRaw(text);
     }
@@ -1203,7 +1210,7 @@ export function buildUiHtml(opts?: {
             div.className = 'msg msg-user';
             div.innerHTML = '<span class="label">Task</span><span class="text">Received instructions from <a href="' + escapeHtml(taskUrl) + '" target="_blank" style="color:#93c5fd;text-decoration:underline;">Viagen Task</a></span>';
             messagesEl.appendChild(div);
-            messagesEl.scrollTop = messagesEl.scrollHeight;
+            scrollToBottom();
             // Send the prompt silently (don't show it as a user message)
             showActivity();
             setStreaming(true);
