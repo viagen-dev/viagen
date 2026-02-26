@@ -122,6 +122,7 @@ function startDots(label: string): { stop: () => void } {
  */
 async function waitForServer(
   baseUrl: string,
+  token: string,
   devServer: { exitCode: number | null; logs(opts?: { signal?: AbortSignal }): AsyncIterable<{ data: string; stream: string }> },
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const timeout = 60_000;
@@ -154,6 +155,7 @@ async function waitForServer(
 
     try {
       const res = await fetch(`${baseUrl}/via/health`, {
+        headers: { Authorization: `Bearer ${token}` },
         signal: AbortSignal.timeout(3000),
       });
       if (res.ok) {
@@ -343,7 +345,7 @@ export async function deploySandbox(
 
     // Wait for the dev server to be ready or fail
     const dots2 = startDots("  Starting dev server");
-    const ready = await waitForServer(baseUrl, devServer);
+    const ready = await waitForServer(baseUrl, token, devServer);
     dots2.stop();
     if (!ready.ok) {
       throw new Error(
