@@ -44,7 +44,7 @@
     "@vercel/sandbox": "^1",
     "lucide-react": "^0.564.0",
     "simple-git": "^3.31.1",
-    "viagen-sdk": "file:../viagen-sdk/sdk"
+    "viagen-sdk": "^0.0.4"
   },
   "license": "MIT",
   "repository": {

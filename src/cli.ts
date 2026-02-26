@@ -1025,7 +1025,7 @@ async function sync() {
   let result;
   try {
     result = await client.projects.sync(syncInput);
-  } catch (err) {
+  } catch (err: unknown) {
     const logDir = join(cwd, ".viagen");
     const logFile = join(logDir, "sync-error.log");
     if (!existsSync(logDir)) {
@@ -1096,7 +1096,7 @@ async function login() {
 
   console.log("Opening browser to authorize...");
   const { token, expiresAt } = await client.auth.loginCli({
-    onOpenUrl: (url) => {
+    onOpenUrl: (url: string) => {
       openBrowser(url);
       console.log("");
       console.log("If the browser didn't open, visit:");
@@ -1153,7 +1153,7 @@ async function whoami() {
     if (user) {
       console.log(`${user.email}${user.name ? ` (${user.name})` : ""}`);
       if (user.organizations.length > 0) {
-        const teams = user.organizations.map((o) =>
+        const teams = user.organizations.map((o: { id: string; name: string }) =>
           o.id === existing.orgId ? `${o.name} (active)` : o.name,
         );
         console.log(`Teams: ${teams.join(", ")}`);
