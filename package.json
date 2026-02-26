@@ -1,6 +1,6 @@
 {
   "name": "viagen",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "description": "Vite dev server plugin that exposes endpoints for chatting with Claude Code SDK",
   "type": "module",
   "main": "./dist/index.js",

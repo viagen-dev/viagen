@@ -334,9 +334,11 @@ export async function deploySandbox(
     }
 
     // Start dev server (detached so it runs in background)
+    // The viagen plugin sets server.host=true when VIAGEN_AUTH_TOKEN is present,
+    // so we don't pass --host here (which would break non-Vite dev servers).
     const devServer = await sandbox.runCommand({
       cmd: "npm",
-      args: ["run", "dev", "--", "--host", "0.0.0.0"],
+      args: ["run", "dev"],
       detached: true,
     });
 

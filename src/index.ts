@@ -69,7 +69,7 @@ export function viagen(options?: ViagenOptions): Plugin {
     config(_, { mode }) {
       const e = loadEnv(mode, process.cwd(), "");
       if (e["VIAGEN_AUTH_TOKEN"]) {
-        return { server: { allowedHosts: true as const } };
+        return { server: { host: true, allowedHosts: true as const } };
       }
     },
     configResolved(config) {
