@@ -39,6 +39,10 @@ interface DeploySandboxOptions {
     teamId: string;
     projectId: string;
   };
+  /** Fling platform credentials. */
+  fling?: {
+    token: string;
+  };
   /** Sandbox timeout in minutes (default: 30, max depends on Vercel plan). */
   timeoutMinutes?: number;
   /** User's .env variables to forward into the sandbox. */
@@ -289,6 +293,14 @@ export async function deploySandbox(
       if (files.length > 0) {
         await sandbox.writeFiles(files);
       }
+    }
+
+    // Install Fling credentials
+    if (opts.fling) {
+      await sandbox.runCommand("bash", [
+        "-c",
+        `mkdir -p ~/.fling && echo '${opts.fling.token}' > ~/.fling/token && chmod 600 ~/.fling/token`,
+      ]);
     }
 
     // Write .env — start with user's app vars, then overlay viagen secrets
