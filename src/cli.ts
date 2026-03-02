@@ -847,6 +847,9 @@ async function sandbox(args: string[], options?: SandboxRunOptions) {
             projectId: env["VERCEL_PROJECT_ID"],
           }
         : undefined,
+    fling: existsSync(join(homedir(), ".fling", "token"))
+      ? { token: readFileSync(join(homedir(), ".fling", "token"), "utf-8").trim() }
+      : undefined,
     timeoutMinutes,
     prompt,
   });

@@ -327,6 +327,10 @@
                         <a href="https://cli.github.com">GitHub CLI</a> —
                         Enables git clone and push from sandboxes.
                     </li>
+                    <li>
+                        <a href="https://flingit.io/">Fling</a> — Optional.
+                        Enables Claude to deploy previews from the sandbox.
+                    </li>
                 </ul>
             </section>
 
@@ -480,6 +484,43 @@ npx viagen sandbox --prompt "build me a landing page"
 
 # Stop a running sandbox
 npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
+            </section>
+
+            <section>
+                <h2>Fling</h2>
+                <p
+                    style="
+                        font-size: 15px;
+                        color: var(--text-muted);
+                        line-height: 1.8;
+                    "
+                >
+                    <a href="https://flingit.io/">Fling</a> lets Claude deploy
+                    shareable previews directly from the sandbox. viagen
+                    automatically detects your Fling credentials — no extra
+                    config needed.
+                </p>
+                <pre style="margin-top: 16px"><code># Log in once with the Fling CLI
+fling login</code></pre>
+                <p
+                    style="
+                        font-size: 15px;
+                        color: var(--text-muted);
+                        line-height: 1.8;
+                        margin-top: 12px;
+                    "
+                >
+                    When
+                    <code style="font-size: 12px; color: var(--code-text)"
+                        >~/.fling/token</code
+                    >
+                    exists, viagen forwards the token into the sandbox so Claude
+                    can run
+                    <code style="font-size: 12px; color: var(--code-text)"
+                        >fling</code
+                    >
+                    to publish previews.
+                </p>
             </section>
 
             <section>
