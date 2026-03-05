@@ -1,6 +1,6 @@
 # Logs
 logs
-*.log
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -15,9 +15,6 @@ dist-ssr
 # Environment
 .env
 .env.bk
-
-# Viagen runtime logs
-.viagen/
 
 # Editor directories and files
 .vscode/*
