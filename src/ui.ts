@@ -141,7 +141,31 @@ export function buildUiHtml(opts?: {
       transition: border-color 0.15s, color 0.15s, background 0.15s;
     }
     .btn:hover { border-color: #d4d4d4; color: #171717; background: #fafafa; }
+    .btn.btn-danger:hover { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
     .btn.active { border-color: #171717; color: #171717; }
+    .btn-dark {
+      padding: 5px 10px;
+      background: #171717;
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .btn-dark:hover { background: #404040; }
+    .btn-dark:disabled { background: #d4d4d4; cursor: default; }
+    .btn-dark.icon-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px 7px;
+      min-width: 28px;
+      min-height: 28px;
+    }
     .icon-btn {
       display: flex;
       align-items: center;
@@ -192,6 +216,7 @@ export function buildUiHtml(opts?: {
     .messages {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 16px;
       display: flex;
       flex-direction: column;
@@ -202,6 +227,8 @@ export function buildUiHtml(opts?: {
       font-size: 13px;
       line-height: 1.6;
       word-wrap: break-word;
+      min-width: 0;
+      max-width: 100%;
     }
     .label {
       font-weight: 500;
@@ -210,6 +237,14 @@ export function buildUiHtml(opts?: {
       letter-spacing: 0.04em;
       display: block;
       margin-bottom: 3px;
+    }
+    .msg-user {
+      background: #f5f5f5;
+      padding: 10px 12px;
+      border-radius: 10px;
+      align-self: flex-end;
+      width: fit-content;
+      max-width: 85%;
     }
     .msg-user .label { color: #a3a3a3; }
     .msg-user .text { color: #171717; }
@@ -229,11 +264,10 @@ export function buildUiHtml(opts?: {
     .msg-assistant .text .md-code {
       font-family: 'Geist Mono', ui-monospace, monospace;
       font-size: 11.5px;
-      background: #f5f5f5;
+      color: #7c3aed;
+      background: #f0edf9;
       padding: 2px 6px;
       border-radius: 4px;
-      color: #171717;
-      border: 1px solid #e5e5e5;
     }
     .msg-assistant .text .md-pre {
       background: #fafafa;
@@ -266,48 +300,191 @@ export function buildUiHtml(opts?: {
       margin-top: 6px;
       font-weight: 600;
     }
-    .msg-tool {
+
+
+    .tool-group {
+    }
+    .tool-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .tool-group-header:hover { background: #f5f5f5; border-radius: 6px; }
+    .tool-group-icon {
+      flex-shrink: 0;
+      color: #a3a3a3;
+    }
+    .tool-group-label {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #A3A3A4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      line-height: 1.4;
+    }
+    .tool-group-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      margin-left: 14px;
+      padding-left: 12px;
+      border-left: 2px solid #e5e5e5;
+    }
+    .tool-group.expanded .tool-group-body {
+      max-height: 2000px;
+      overflow-y: auto;
+    }
+    .tool-group-item {
+      padding: 6px 4px;
       font-family: 'Geist Mono', ui-monospace, monospace;
       font-size: 11px;
       color: #737373;
-      background: #fafafa;
-      border: 1px solid #e5e5e5;
-      border-radius: 8px;
-      padding: 7px 10px;
-      white-space: pre-wrap;
+      line-height: 1.4;
       word-break: break-word;
     }
-    .msg-tool-result {
-      font-family: 'Geist Mono', ui-monospace, monospace;
-      font-size: 10px;
-      color: #a3a3a3;
+    .tool-group-item.clickable,
+    .task-tool-item.clickable {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .tool-group-item.clickable:hover,
+    .task-tool-item.clickable:hover {
       background: #f5f5f5;
-      border: 1px solid #e5e5e5;
-      border-top: none;
-      border-radius: 0 0 8px 8px;
-      padding: 0;
+      border-radius: 4px;
+    }
+    .tool-cmd {
+      font-family: 'Geist Mono', ui-monospace, monospace;
+      font-size: 11px;
+      color: #7c3aed;
+      background: #f0edf9;
+      padding: 1px 5px;
+      border-radius: 3px;
+    }
+    .tool-group-item.committed,
+    .task-tool-item.committed {
+      cursor: default;
+      pointer-events: none;
+      opacity: 0.55;
+      background: #f5f5f5;
+    }
+    .task-group {
+    }
+    .task-group-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 4px 8px;
+      cursor: pointer;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .task-group:not(.expanded) .task-group-header {
+    }
+    .task-group-header:hover { background: #f5f5f5; border-radius: 6px; }
+    .task-group-checkbox {
+      flex-shrink: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1.5px solid #d4d4d4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      background: #fff;
+    }
+    .task-group-checkbox svg {
+      display: none;
+    }
+    .task-group.running .task-group-checkbox {
+      border-color: #a3a3a3;
+      animation: task-checkbox-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes task-checkbox-pulse {
+      0%, 100% { border-color: #a3a3a3; }
+      50% { border-color: #d4d4d4; }
+    }
+    .task-group.completed .task-group-checkbox {
+      background: #22c55e;
+      border-color: #22c55e;
+    }
+    .task-group.completed .task-group-checkbox svg {
+      display: block;
+    }
+    .task-group.failed .task-group-checkbox {
+      background: #dc2626;
+      border-color: #dc2626;
+    }
+    .task-group.failed .task-group-checkbox svg {
+      display: block;
+    }
+    .task-group-title {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      color: #171717;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      line-height: 1.4;
+    }
+    .task-group.completed .task-group-title {
+      color: #a3a3a3;
+    }
+    .task-group.failed .task-group-title {
+      color: #a3a3a3;
+    }
+    .task-group-body {
       max-height: 0;
       overflow: hidden;
-      transition: max-height 0.2s, padding 0.2s;
-      white-space: pre-wrap;
-      word-break: break-word;
+      transition: max-height 0.3s ease;
+      margin-left: 14px;
+      padding-left: 12px;
+      border-left: 2px solid #e5e5e5;
     }
-    .msg-tool-result.open {
-      max-height: 200px;
-      padding: 7px 10px;
+    .task-group.expanded .task-group-body {
+      max-height: 5000px;
       overflow-y: auto;
     }
-    .msg-tool.expandable {
-      cursor: pointer;
-      border-radius: 8px 8px 0 0;
+    .task-group-body .msg {
+      margin: 0;
     }
-    .msg-tool.expandable::after {
-      content: ' +';
-      color: #d4d4d4;
+    .task-tool-item {
+      padding: 6px 4px;
+      font-family: 'Geist Mono', ui-monospace, monospace;
+      font-size: 11px;
+      color: #737373;
+      line-height: 1.4;
+      word-break: break-word;
     }
-    .msg-tool.expandable.expanded::after {
-      content: ' \\2212';
+
+
+    .task-group-body .tool-group {
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
     }
+    .task-group-body .msg-assistant {
+      padding: 8px 12px;
+      border-top: 1px solid #e5e5e5;
+    }
+    .task-group-body .msg-error {
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+    }
+
+
     .msg-error {
       font-size: 12px;
       color: #dc2626;
@@ -316,6 +493,53 @@ export function buildUiHtml(opts?: {
       border-radius: 8px;
       padding: 7px 10px;
     }
+    .update-banner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: #525252;
+      background: #fafafa;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin: 0 0 8px 0;
+      line-height: 1.5;
+      flex-shrink: 0;
+    }
+    .update-banner .system-icon {
+      flex-shrink: 0;
+      color: #a3a3a3;
+    }
+    .update-banner .system-text {
+      flex: 1;
+    }
+    .update-banner .system-action {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 6px;
+      background: #171717;
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .update-banner .system-action:hover { background: #404040; }
+    .update-banner .system-dismiss {
+      color: #a3a3a3;
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      padding: 2px;
+      flex-shrink: 0;
+      transition: color 0.15s;
+      background: none;
+      border: none;
+    }
+    .update-banner .system-dismiss:hover { color: #525252; }
     .input-area {
       padding: 12px 16px;
       flex-shrink: 0;
@@ -374,7 +598,7 @@ export function buildUiHtml(opts?: {
     .send-btn.active:hover { background: #404040; border-color: #404040; }
     .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
     .status-bar {
-      display: flex;
+      display: none;
       align-items: center;
       gap: 8px;
       padding: 5px 16px;
@@ -389,25 +613,51 @@ export function buildUiHtml(opts?: {
     .status-bar span:hover { color: #525252; }
     .status-bar .d-add { color: #16a34a; }
     .status-bar .d-del { color: #dc2626; }
-    .changes-branch {
-      padding: 8px 16px;
-      font-family: 'Geist Mono', ui-monospace, monospace;
-      font-size: 12px;
-      color: #525252;
-      border-bottom: 1px solid #f5f5f5;
+    .changes-header {
+      padding: 8px 14px;
+      border-bottom: 1px solid #e5e5e5;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       flex-shrink: 0;
-      background: #ffffff;
+      background: #f5f5f5;
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #171717;
     }
-    .changes-branch a {
+    .changes-header-sep {
+      color: #737373;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .changes-header-branch {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 12px;
+      color: #525252;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      padding: 3px 8px;
+      background: #ffffff;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .changes-header-branch:hover { border-color: #d4d4d4; color: #171717; background: #fafafa; }
+    .changes-header-branch a {
+      color: inherit;
+      text-decoration: none;
+    }
+    .changes-header-pr {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
       color: #a3a3a3;
       text-decoration: none;
-      font-size: 11px;
       transition: color 0.15s;
     }
-    .changes-branch a:hover { color: #525252; }
+    .changes-header-pr:hover { color: #525252; }
+    .changes-header-stats {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #737373;
+    }
     .tab-bar {
       display: flex;
       border-bottom: 1px solid #e5e5e5;
@@ -465,21 +715,9 @@ export function buildUiHtml(opts?: {
       color: #a3a3a3;
       font-family: 'Geist Mono', ui-monospace, monospace;
     }
-    .changes-summary {
-      padding: 8px 16px;
-      border-bottom: 1px solid #e5e5e5;
-      background: #fafafa;
-      font-family: 'Geist Mono', ui-monospace, monospace;
-      font-size: 11px;
-      color: #737373;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-shrink: 0;
-    }
-    .changes-summary .stat-add { color: #16a34a; }
-    .changes-summary .stat-del { color: #dc2626; }
-    .changes-summary .stat-files { color: #525252; }
+    .changes-header .stat-add { color: #16a34a; }
+    .changes-header .stat-del { color: #dc2626; }
+    .changes-header .stat-files { color: #525252; }
     .file-delta {
       font-family: 'Geist Mono', ui-monospace, monospace;
       font-size: 10px;
@@ -516,38 +754,99 @@ export function buildUiHtml(opts?: {
       text-align: center;
       margin-top: 40%;
     }
+    .editor-header {
+      padding: 8px 14px;
+      border-bottom: 1px solid #e5e5e5;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      background: #f5f5f5;
+    }
+    .editor-back {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 28px;
+      min-height: 28px;
+      padding: 5px 7px;
+      background: #ffffff;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      color: #525252;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.15s, color 0.15s, background 0.15s;
+    }
+    .editor-back:hover { border-color: #d4d4d4; color: #171717; background: #fafafa; }
+    .editor-filename {
+      flex: 1;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #171717;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .logs-header {
-      padding: 6px 12px;
+      padding: 8px 14px;
       border-bottom: 1px solid #e5e5e5;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 10px;
       flex-shrink: 0;
-      background: #fafafa;
+      background: #f5f5f5;
     }
     .logs-header span {
-      font-family: 'Geist Mono', ui-monospace, monospace;
-      font-size: 11px;
-      color: #a3a3a3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 13px;
+      color: #171717;
     }
     .logs-list {
       flex: 1;
       overflow-y: auto;
-      padding: 4px 0;
+      padding: 0;
       background: #ffffff;
     }
     .log-entry {
-      padding: 1px 16px;
+      padding: 8px 16px;
       font-family: 'Geist Mono', ui-monospace, monospace;
-      font-size: 11px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-      word-break: break-all;
+      font-size: 12px;
       color: #525252;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.1s;
+      border-bottom: 1px solid #f5f5f5;
     }
-    .log-entry.warn { color: #d97706; }
-    .log-entry.error { color: #dc2626; }
-    .log-time { color: #a3a3a3; margin-right: 8px; }
+    .log-entry:hover { background: #fafafa; color: #171717; }
+    .log-icon {
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #a3a3a3;
+    }
+    .log-entry.warn .log-icon { background: #d97706; }
+    .log-entry.error .log-icon { background: #dc2626; }
+    .log-icon svg { display: none; }
+    .log-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .log-time {
+      font-family: 'Geist Mono', ui-monospace, monospace;
+      font-size: 10px;
+      color: #a3a3a3;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
     .logs-empty {
       padding: 16px;
       color: #a3a3a3;
@@ -575,7 +874,7 @@ export function buildUiHtml(opts?: {
       <button class="btn icon-btn" id="sound-btn" title="Toggle completion sound">
         <svg id="sound-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
       </button>
-      <button class="btn" id="reset-btn">Reset</button>
+      <button class="btn" id="reset-btn" style="display:none;">Reset</button>
     </div>
   </div>
   ${
@@ -594,6 +893,7 @@ export function buildUiHtml(opts?: {
     <div class="activity-bar" id="activity-bar"></div>
     <div class="messages" id="messages"></div>
     <div class="input-area">
+      <div id="update-banner-container"></div>
       <div class="input-wrap" id="input-wrap">
         <textarea id="input" rows="1" placeholder="What do you want to build?" autofocus></textarea>
         <div class="input-bottom">
@@ -607,22 +907,22 @@ export function buildUiHtml(opts?: {
   ${
     hasGit
       ? `<div id="changes-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
-    <div class="changes-branch" id="changes-branch" style="display:none;">
-      <span id="changes-branch-name"></span>
-      <a id="changes-pr-link" target="_blank" style="display:none;"></a>
-    </div>
-    <div class="changes-summary" id="changes-summary" style="display:none;">
-      <span id="changes-stats"></span>
+    <div class="changes-header" id="changes-header" style="display:none;">
+      <span class="changes-header-branch" id="changes-branch-name"></span>
+      <span class="changes-header-sep changes-sep-pr" id="changes-sep-pr" style="display:none;">&middot;</span>
+      <a class="changes-header-pr" id="changes-pr-link" target="_blank" style="display:none;"></a>
+      <span class="changes-header-sep changes-sep-stats" id="changes-sep-stats" style="display:none;">&middot;</span>
+      <span class="changes-header-stats" id="changes-stats"></span>
       <span style="flex:1;"></span>
-      <button class="btn" id="commit-btn" style="font-size:11px;padding:3px 8px;">Commit</button>
-      <button class="btn" id="revert-btn" style="font-size:11px;padding:3px 8px;color:#dc2626;border-color:#fecaca;">Revert</button>
+      <button class="btn-dark icon-btn" id="commit-btn" title="Git commit"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="22"/></svg></button>
+      <button class="btn btn-danger icon-btn" id="revert-btn" title="Revert changes" style="color:#dc2626;border-color:#fecaca;"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
     </div>
     <div id="changes-list-view" style="flex:1;overflow-y:auto;">
       <div id="changes-list" style="padding:0;"></div>
     </div>
     <div id="changes-diff-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
       <div class="editor-header">
-        <button class="editor-back" id="diff-back" title="Back to changes">&#x2190;</button>
+        <button class="editor-back" id="diff-back" title="Back to changes"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></button>
         <span class="editor-filename" id="diff-filename"></span>
       </div>
       <div class="diff-view" id="diff-content"></div>
@@ -633,7 +933,7 @@ export function buildUiHtml(opts?: {
   <div id="logs-view" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
     <div class="logs-header">
       <span id="logs-count"></span>
-      <button class="btn" id="logs-refresh" style="font-size:11px;padding:2px 8px;">Refresh</button>
+      <button class="btn-dark icon-btn" id="logs-refresh" title="Refresh"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
     </div>
     <div class="logs-list" id="logs-list"></div>
   </div>
@@ -784,14 +1084,35 @@ export function buildUiHtml(opts?: {
           }
         } else if (entry.role === 'assistant' && entry.type === 'text') {
           chatLog.push({ type: 'text', content: entry.text });
+          closeToolGroup();
+          closeAllTaskGroups('completed');
           renderTextBlock(entry.text);
         } else if (entry.role === 'assistant' && entry.type === 'tool_use') {
-          var label = formatTool(entry.name, entry.input);
-          chatLog.push({ type: 'tool', content: label });
-          renderToolBlock(label);
+          if (entry.name === 'EnterPlanMode' || entry.name === 'ExitPlanMode') {
+            // Silent — internal Claude workflow state, not shown in UI
+          } else if (entry.name === 'TodoWrite' || entry.name === 'TaskOutput' || entry.name === 'AskUserQuestion') {
+            // Silent — internal Claude bookkeeping, not shown in UI
+          } else if (entry.name === 'Task') {
+            var taskDesc = (entry.input && entry.input.description) ? entry.input.description : 'Task';
+            chatLog.push({ type: 'tool', content: formatTool(entry.name, entry.input) });
+            openTaskGroup(taskDesc, entry.toolUseId);
+          } else {
+            var label = formatTool(entry.name, entry.input);
+            chatLog.push({ type: 'tool', content: label });
+            renderToolBlock(entry.name, entry.input);
+          }
+        } else if (entry.role === 'assistant' && entry.type === 'task_started') {
+          // task_started is a backup — task group may already be open from tool_use
+          var tid = entry.toolUseId;
+          if (tid && taskGroupMap[tid]) { /* already opened */ }
+          else if (!currentTaskGroup) openTaskGroup(entry.text || 'Task', tid);
+        } else if (entry.role === 'assistant' && entry.type === 'task_notification') {
+          closeTaskGroup(entry.toolUseId, entry.status || 'completed', entry.text, null);
         }
         // Skip 'result' entries — they duplicate the last text block
       }
+      closeToolGroup();
+      closeAllTaskGroups('completed');
       if (entries.length > 0) messagesEl.scrollTop = messagesEl.scrollHeight;
     }
 
@@ -803,6 +1124,7 @@ export function buildUiHtml(opts?: {
         chatLog = [];
         messagesEl.innerHTML = '';
         appendHistoryEntries(data.entries);
+        markCommittedFiles();
       } catch(e) {}
     }
 
@@ -813,6 +1135,7 @@ export function buildUiHtml(opts?: {
         var data = await res.json();
         if (data.entries && data.entries.length > 0) {
           appendHistoryEntries(data.entries);
+          markCommittedFiles();
         }
       } catch(e) {}
     }
@@ -915,6 +1238,149 @@ export function buildUiHtml(opts?: {
       }
     }
 
+    function getToolCategory(name) {
+      switch (name) {
+        case 'Read': return 'reading';
+        case 'Grep': case 'Glob': return 'searching';
+        case 'Edit': case 'Write': return 'editing';
+        case 'Bash': return 'commands';
+        default: return 'other';
+      }
+    }
+
+    function getCategoryLabel(category, count) {
+      switch (category) {
+        case 'reading': return count === 1 ? 'Reading file' : 'Reading files';
+        case 'searching': return count === 1 ? 'Searching' : 'Searching';
+        case 'editing': return count === 1 ? 'Editing file' : 'Editing files';
+        case 'commands': return count === 1 ? 'Running command' : 'Running commands';
+        default: return count === 1 ? 'Tool call' : 'Tool calls';
+      }
+    }
+
+    function getFilename(filepath) {
+      if (!filepath) return '';
+      var parts = filepath.replace(/\\\\/g, '/').split('/');
+      return parts[parts.length - 1] || filepath;
+    }
+
+    function formatToolChild(name, input) {
+      var i = input || {};
+      switch (name) {
+        case 'Read': return i.file_path ? 'Reading ' + getFilename(i.file_path) : 'Read';
+        case 'Edit': return i.file_path ? 'Editing ' + getFilename(i.file_path) : 'Edit';
+        case 'Write': return i.file_path ? 'Writing ' + getFilename(i.file_path) : 'Write';
+        case 'Bash': return i.command ? '$ ' + i.command : 'Bash';
+        case 'Glob': return i.pattern ? 'Finding ' + i.pattern : 'Glob';
+        case 'Grep': return i.pattern ? 'Searching "' + i.pattern + '"' : 'Grep';
+        default: return name;
+      }
+    }
+
+    function formatToolChildHtml(name, input) {
+      var i = input || {};
+      switch (name) {
+        case 'Bash': return i.command ? '<code class="tool-cmd">' + escapeHtml(i.command) + '</code>' : 'Bash';
+        default: return escapeHtml(formatToolChild(name, input));
+      }
+    }
+
+    // ── Task group system ──
+    var taskGroupMap = {};
+    var currentTaskGroup = null;
+    var checkSvgComplete = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    var checkSvgFailed = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+    function getContainer() {
+      if (currentTaskGroup) {
+        return currentTaskGroup.querySelector('.task-group-body');
+      }
+      return messagesEl;
+    }
+
+    function openTaskGroup(description, toolUseId) {
+      // Auto-close any orphaned task group that isn't tracked in the map
+      if (currentTaskGroup && !currentTaskGroup._toolUseId) {
+        closeTaskGroup(null, 'completed', null, null);
+      }
+      // Close any active tool group first
+      closeToolGroup();
+      currentTextSpan = null;
+
+      var group = document.createElement('div');
+      group.className = 'msg task-group running expanded';
+      group.innerHTML = '<div class="task-group-header">' +
+        '<span class="task-group-checkbox">' + checkSvgComplete + '</span>' +
+        '<span class="task-group-title">' + escapeHtml(description) + '</span>' +
+        '</div>' +
+        '<div class="task-group-body"></div>';
+      group._toolCount = 0;
+      group._toolUseId = toolUseId || null;
+      messagesEl.appendChild(group);
+
+      group.querySelector('.task-group-header').addEventListener('click', function() {
+        group.classList.toggle('expanded');
+      });
+
+      if (toolUseId) {
+        taskGroupMap[toolUseId] = group;
+      }
+      currentTaskGroup = group;
+      return group;
+    }
+
+    function findTaskGroup(toolUseId) {
+      if (toolUseId && taskGroupMap[toolUseId]) {
+        return taskGroupMap[toolUseId];
+      }
+      return currentTaskGroup;
+    }
+
+    function closeTaskGroup(toolUseId, status, summary, usage) {
+      var group = findTaskGroup(toolUseId);
+      if (!group) return;
+
+      // If this is the active task group, close nested tool group
+      if (group === currentTaskGroup) {
+        closeToolGroup();
+        currentTextSpan = null;
+      }
+
+      // Update checkbox state
+      group.classList.remove('running');
+      var statusClass = (status === 'failed') ? 'failed' : 'completed';
+      group.classList.add(statusClass);
+
+      // Swap the checkbox SVG
+      var checkbox = group.querySelector('.task-group-checkbox');
+      if (checkbox) {
+        checkbox.innerHTML = (status === 'failed') ? checkSvgFailed : checkSvgComplete;
+      }
+
+      // Collapse
+      group.classList.remove('expanded');
+
+      // Clean up map
+      var id = group._toolUseId;
+      if (id && taskGroupMap[id]) {
+        delete taskGroupMap[id];
+      }
+      if (group === currentTaskGroup) {
+        currentTaskGroup = null;
+      }
+    }
+
+    function closeAllTaskGroups(status) {
+      // Close any remaining open task groups
+      var ids = Object.keys(taskGroupMap);
+      for (var i = 0; i < ids.length; i++) {
+        closeTaskGroup(ids[i], status, null, null);
+      }
+      if (currentTaskGroup) {
+        closeTaskGroup(null, status, null, null);
+      }
+    }
+
     function renderUserMessage(text) {
       var div = document.createElement('div');
       div.className = 'msg msg-user';
@@ -924,39 +1390,172 @@ export function buildUiHtml(opts?: {
 
     function renderTextBlock(text) {
       currentTextSpan = null;
+      var container = getContainer();
       var div = document.createElement('div');
       div.className = 'msg msg-assistant';
       div.innerHTML = '<span class="text stream-text"></span>';
-      messagesEl.appendChild(div);
+      container.appendChild(div);
       div.querySelector('.stream-text').innerHTML = renderMarkdown(text);
     }
 
-    var lastToolEl = null;
+    var currentToolGroup = null;
+    var currentToolGroupCount = 0;
+    var currentToolGroupCategory = null;
 
-    function renderToolBlock(text) {
+    function getCategoryIcon(category) {
+      switch (category) {
+        case 'reading': return '<svg class="tool-group-icon icon-expanded" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><svg class="tool-group-icon icon-collapsed" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>';
+        case 'searching': return '<svg class="tool-group-icon icon-expanded" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 6H3"/><path d="M10 12H3"/><path d="M10 18H3"/><circle cx="17" cy="15" r="3"/><path d="m21 19-1.9-1.9"/></svg><svg class="tool-group-icon icon-collapsed" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>';
+        case 'editing': return '<svg class="tool-group-icon icon-expanded" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.829 2.829 0 0 0-4-4L4 16v4"/><path d="m13.5 6.5 4 4"/><path d="M2 20h20"/></svg><svg class="tool-group-icon icon-collapsed" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.829 2.829 0 0 0-4-4L4 16v4"/><path d="m13.5 6.5 4 4"/></svg>';
+        case 'commands': return '<svg class="tool-group-icon icon-expanded" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><polyline points="7 15 10 12 7 9"/><line x1="13" x2="17" y1="15" y2="15"/></svg><svg class="tool-group-icon icon-collapsed" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>';
+        default: return '<svg class="tool-group-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>';
+      }
+    }
+
+    function createToolGroup(category) {
+      var container = getContainer();
+      var group = document.createElement('div');
+      group.className = 'msg tool-group expanded cat-' + category;
+      group.innerHTML = '<div class="tool-group-header">' +
+        getCategoryIcon(category) +
+        '<span class="tool-group-label">' + escapeHtml(getCategoryLabel(category, 1)) + '</span>' +
+        '</div>' +
+        '<div class="tool-group-body"></div>';
+      group._category = category;
+      container.appendChild(group);
+
+      group.querySelector('.tool-group-header').addEventListener('click', function() {
+        group.classList.toggle('expanded');
+        var isExpanded = group.classList.contains('expanded');
+        var iconExp = group.querySelector('.icon-expanded');
+        var iconCol = group.querySelector('.icon-collapsed');
+        if (iconExp && iconCol) {
+          iconExp.style.display = isExpanded ? '' : 'none';
+          iconCol.style.display = isExpanded ? 'none' : '';
+        }
+      });
+
+      return group;
+    }
+
+    function updateToolGroupLabel(group, count) {
+      var label = group.querySelector('.tool-group-label');
+      var cat = group._category || 'other';
+      if (label) label.textContent = getCategoryLabel(cat, count);
+    }
+
+    function addToolItem(group, text, filePath, html) {
+      var body = group.querySelector('.tool-group-body');
+      if (!body) return null;
+
+      var item = document.createElement('div');
+      item.className = 'tool-group-item' + (filePath ? ' clickable' : '');
+      if (html) { item.innerHTML = html; } else { item.textContent = text; }
+      if (filePath) {
+        item.dataset.filePath = filePath;
+        item.addEventListener('click', function() { navigateToDiff(filePath); });
+      }
+      body.appendChild(item);
+
+      return item;
+    }
+
+    function closeToolGroup() {
+      if (currentToolGroup) {
+        currentToolGroup.classList.remove('expanded');
+        var iconExp = currentToolGroup.querySelector('.icon-expanded');
+        var iconCol = currentToolGroup.querySelector('.icon-collapsed');
+        if (iconExp && iconCol) {
+          iconExp.style.display = 'none';
+          iconCol.style.display = '';
+        }
+        currentToolGroup = null;
+        currentToolGroupCount = 0;
+        currentToolGroupCategory = null;
+      }
+    }
+
+    function markCommittedFiles() {
+      fetch('/via/git/status').then(function(res) { return res.json(); }).then(function(data) {
+        var changedPaths = {};
+        if (data && data.files) {
+          data.files.forEach(function(f) { changedPaths[f.path] = true; });
+        }
+        var items = document.querySelectorAll('.tool-group-item[data-file-path], .task-tool-item[data-file-path]');
+        for (var i = 0; i < items.length; i++) {
+          var fp = items[i].dataset.filePath;
+          if (fp && !changedPaths[fp]) {
+            items[i].classList.remove('clickable');
+            items[i].classList.add('committed');
+          }
+        }
+      }).catch(function() {});
+    }
+
+    function navigateToDiff(filePath) {
+      var changesTab = document.querySelector('[data-tab="changes"]');
+      if (!changesTab) return;
+      changesTab.click();
+      // Wait for changes view to load, then open the diff
+      setTimeout(function() {
+        if (window._viagenOpenDiff) {
+          window._viagenOpenDiff(filePath);
+        }
+      }, 300);
+    }
+
+    function renderToolBlock(name, input) {
       currentTextSpan = null;
-      var div = document.createElement('div');
-      div.className = 'msg msg-tool';
-      div.textContent = text;
-      messagesEl.appendChild(div);
-      lastToolEl = div;
+      var category = getToolCategory(name);
+      var childText = formatToolChild(name, input);
+      var childHtml = formatToolChildHtml(name, input);
+      var filePath = (name === 'Edit' || name === 'Write') && input && input.file_path ? input.file_path : null;
+
+      if (currentTaskGroup || activeToolUseId) {
+        // Inside a task group — render directly as a flat child
+        var targetGroup = activeToolUseId ? findTaskGroup(activeToolUseId) : currentTaskGroup;
+        if (!targetGroup) targetGroup = currentTaskGroup;
+        var body = targetGroup ? targetGroup.querySelector('.task-group-body') : null;
+        if (!body) { return; }
+        var item = document.createElement('div');
+        item.className = 'task-tool-item' + (filePath ? ' clickable' : '');
+        item.innerHTML = childHtml;
+        if (filePath) {
+          item.dataset.filePath = filePath;
+          item.addEventListener('click', function() { navigateToDiff(filePath); });
+        }
+        body.appendChild(item);
+      } else if (currentToolGroup && currentToolGroupCategory === category) {
+        // Already in a same-category group — just add to it
+        currentToolGroupCount++;
+        updateToolGroupLabel(currentToolGroup, currentToolGroupCount);
+        addToolItem(currentToolGroup, childText, filePath, childHtml);
+      } else {
+        // Different category or no active group — close current, start new group
+        closeToolGroup();
+        currentToolGroup = createToolGroup(category);
+        currentToolGroupCount = 1;
+        currentToolGroupCategory = category;
+        addToolItem(currentToolGroup, childText, filePath, childHtml);
+      }
     }
 
     function renderErrorBlock(text) {
+      var container = getContainer();
       var div = document.createElement('div');
       div.className = 'msg msg-error';
       div.textContent = text;
-      messagesEl.appendChild(div);
+      container.appendChild(div);
     }
 
     function addUserMessage(text) {
       chatLog.push({ type: 'user', content: text });
-
+      closeToolGroup();
       renderUserMessage(text);
       scrollToBottom();
     }
 
-    function appendText(text) {
+    function appendText(text, parentToolUseId) {
       var last = chatLog[chatLog.length - 1];
       if (last && last.type === 'text') {
         last.content += text;
@@ -964,12 +1563,19 @@ export function buildUiHtml(opts?: {
         chatLog.push({ type: 'text', content: text });
       }
 
+      // Parent-level text (no parent) means the sub-agent is done
+      if (currentTaskGroup && (parentToolUseId === null || parentToolUseId === undefined)) {
+        closeAllTaskGroups('completed');
+      }
+
+      closeToolGroup();
 
       if (!currentTextSpan) {
+        var container = getContainer();
         var div = document.createElement('div');
         div.className = 'msg msg-assistant';
         div.innerHTML = '<span class="text stream-text"></span>';
-        messagesEl.appendChild(div);
+        container.appendChild(div);
         currentTextSpan = div.querySelector('.stream-text');
       }
       var fullText = chatLog[chatLog.length - 1].content;
@@ -977,27 +1583,34 @@ export function buildUiHtml(opts?: {
       scrollToBottom();
     }
 
-    function addToolBlock(name, input) {
+    var activeToolUseId = null;
+
+    function addToolBlock(name, input, toolUseId) {
       currentTextSpan = null;
+      if (name === 'EnterPlanMode' || name === 'ExitPlanMode') {
+        // Silent — internal Claude workflow state, not shown in UI
+        return;
+      }
+      if (name === 'TodoWrite' || name === 'TaskOutput' || name === 'AskUserQuestion') {
+        // Silent — internal Claude bookkeeping, not shown in UI
+        return;
+      }
+      if (name === 'Task') {
+        var taskDesc = (input && input.description) ? input.description : 'Task';
+        chatLog.push({ type: 'tool', content: formatTool(name, input) });
+        openTaskGroup(taskDesc, toolUseId);
+        scrollToBottom();
+        return;
+      }
       var label = formatTool(name, input);
       chatLog.push({ type: 'tool', content: label });
 
-      renderToolBlock(label);
+      renderToolBlock(name, input);
       scrollToBottom();
     }
 
     function renderToolResult(text) {
-      if (!lastToolEl) return;
-      lastToolEl.classList.add('expandable');
-      var resultDiv = document.createElement('div');
-      resultDiv.className = 'msg-tool-result';
-      var truncated = text.length > 2000 ? text.slice(0, 2000) + '...' : text;
-      resultDiv.textContent = truncated;
-      lastToolEl.after(resultDiv);
-      lastToolEl.addEventListener('click', function() {
-        lastToolEl.classList.toggle('expanded');
-        resultDiv.classList.toggle('open');
-      });
+      // Results are not displayed at the item level; consumed silently
     }
 
     function addToolResult(text) {
@@ -1006,9 +1619,25 @@ export function buildUiHtml(opts?: {
       renderToolResult(text);
     }
 
+    function updateLastGroupSummary(summary) {
+      if (!summary) return;
+      // If inside a task group, update the task group title with the summary
+      if (currentTaskGroup) {
+        var titleEl = currentTaskGroup.querySelector('.task-group-title');
+        if (titleEl) titleEl.textContent = summary;
+        return;
+      }
+      // Otherwise find the most recently closed tool-group and update its label
+      var groups = messagesEl.querySelectorAll('.tool-group');
+      if (groups.length === 0) return;
+      var lastGroup = groups[groups.length - 1];
+      var label = lastGroup.querySelector('.tool-group-label');
+      if (label) label.textContent = summary;
+    }
+
     function addErrorBlock(text) {
       chatLog.push({ type: 'error', content: text });
-
+      closeToolGroup();
       renderErrorBlock(text);
       scrollToBottom();
     }
@@ -1062,10 +1691,18 @@ export function buildUiHtml(opts?: {
             if (!lines[i].startsWith('data: ')) continue;
             try {
               var data = JSON.parse(lines[i].slice(6));
-              if (data.type === 'text') appendText(data.text);
-              else if (data.type === 'tool_use') { toolCount++; updateActivityBar(); addToolBlock(data.name, data.input); }
+              if (data.type === 'text') appendText(data.text, data.parentToolUseId);
+              else if (data.type === 'tool_use') { toolCount++; updateActivityBar(); activeToolUseId = data.toolUseId || null; addToolBlock(data.name, data.input, data.toolUseId); }
               else if (data.type === 'tool_result') addToolResult(data.text);
               else if (data.type === 'error') addErrorBlock(data.text);
+              else if (data.type === 'task_started') {
+                var tid = data.toolUseId;
+                if (tid && taskGroupMap[tid]) { /* already opened by tool_use */ }
+                else if (!currentTaskGroup) { openTaskGroup(data.description || 'Task', tid); }
+                scrollToBottom();
+              }
+              else if (data.type === 'task_notification') { closeTaskGroup(data.toolUseId, data.status, data.summary, data.taskUsage); scrollToBottom(); }
+              else if (data.type === 'tool_use_summary') { updateLastGroupSummary(data.summary); }
               else if (data.type === 'done') lastUsage = data;
             } catch (e) {}
           }
@@ -1074,10 +1711,13 @@ export function buildUiHtml(opts?: {
         if (!unloading) addErrorBlock('Connection failed');
       }
 
+      closeToolGroup();
+      closeAllTaskGroups('completed');
       hideActivity(lastUsage);
       playDoneSound();
       historyTimestamp = Date.now();
       setStreaming(false);
+      markCommittedFiles();
       inputEl.focus();
     }
 
@@ -1284,21 +1924,23 @@ export function buildUiHtml(opts?: {
                 if (changesTab) changesTab.click();
               });
             }
-            // Changes tab branch header
-            var changesBranch = document.getElementById('changes-branch');
+            // Changes tab header — branch name
+            var changesHeader = document.getElementById('changes-header');
             var changesBranchName = document.getElementById('changes-branch-name');
             var changesPrLink = document.getElementById('changes-pr-link');
-            if (changesBranch && changesBranchName) {
-              changesBranch.style.display = 'flex';
+            if (changesHeader && changesBranchName) {
+              changesHeader.style.display = 'flex';
               changesBranchName.textContent = '\\u2387 ' + d.branch;
               if (branchUrl && !d.pr) {
-                changesBranchName.innerHTML = '<a href="' + branchUrl + '" target="_blank" style="color:inherit;text-decoration:none;">' + '\\u2387 ' + escapeHtml(d.branch) + '</a>';
+                changesBranchName.innerHTML = '<a href="' + branchUrl + '" target="_blank">' + '\\u2387 ' + escapeHtml(d.branch) + '</a>';
               }
             }
             if (changesPrLink && d.pr) {
-              changesPrLink.style.display = 'inline';
+              changesPrLink.style.display = '';
               changesPrLink.href = d.pr.url;
-              changesPrLink.textContent = '\\u2192 #' + d.pr.number + ' ' + d.pr.title;
+              changesPrLink.textContent = '#' + d.pr.number + ' ' + d.pr.title;
+              var sepPr = document.getElementById('changes-sep-pr');
+              if (sepPr) sepPr.style.display = '';
             }
           }).catch(function() {});
         }
@@ -1306,13 +1948,14 @@ export function buildUiHtml(opts?: {
         // Check for viagen updates — show as system message in chat
         fetch('/via/version').then(function(r) { return r.json(); }).then(function(v) {
           if (v.updateAvailable && v.latest) {
+            var bannerContainer = document.getElementById('update-banner-container');
             var card = document.createElement('div');
-            card.className = 'msg msg-system';
+            card.className = 'update-banner';
             card.innerHTML = '<svg class="system-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>' +
               '<span class="system-text">viagen <strong>' + escapeHtml(v.latest) + '</strong> is available</span>' +
               '<button class="system-action" id="update-btn">Update</button>' +
               '<button class="system-dismiss" id="update-dismiss">&times;</button>';
-            messagesEl.insertBefore(card, messagesEl.firstChild);
+            bannerContainer.appendChild(card);
             document.getElementById('update-btn').addEventListener('click', function() {
               card.remove();
               inputEl.value = 'Update viagen to v' + v.latest + ' (npm install viagen@' + v.latest + ') and restart the dev server.';
@@ -1396,7 +2039,7 @@ export function buildUiHtml(opts?: {
       var diffContent = document.getElementById('diff-content');
       var diffFilename = document.getElementById('diff-filename');
       var changesTab = document.getElementById('changes-tab');
-      var changesSummary = document.getElementById('changes-summary');
+      var changesHeader = document.getElementById('changes-header');
 
       var changesDotEl = document.getElementById('changes-dot');
       function updateChangesDot(hasChanges) {
@@ -1404,11 +2047,11 @@ export function buildUiHtml(opts?: {
       }
 
       window._viagenLoadChanges = loadChanges;
+      window._viagenOpenDiff = openDiff;
 
       async function loadChanges() {
         changesListView.style.display = 'block';
         changesDiffView.style.display = 'none';
-        changesSummary.style.display = 'none';
         changesListEl.innerHTML = '<div style="padding:16px;color:#a3a3a3;font-size:12px;font-family:Geist Mono,ui-monospace,monospace;">Loading...</div>';
         try {
           var res = await fetch('/via/git/status');
@@ -1431,12 +2074,18 @@ export function buildUiHtml(opts?: {
         var ins = data.insertions || 0;
         var del = data.deletions || 0;
         var count = data.files ? data.files.length : 0;
-        if (count === 0) { changesSummary.style.display = 'none'; return; }
-        changesSummary.style.display = 'flex';
-        changesStatsEl.innerHTML =
-          '<span class="stat-files">' + count + (count === 1 ? ' file' : ' files') + '</span>' +
-          (ins > 0 ? ' <span class="stat-add">+' + ins + '</span>' : '') +
-          (del > 0 ? ' <span class="stat-del">-' + del + '</span>' : '');
+        var sepStats = document.getElementById('changes-sep-stats');
+        if (count === 0) { changesStatsEl.innerHTML = ''; if (sepStats) sepStats.style.display = 'none'; changesHeader.style.display = 'flex'; return; }
+        changesHeader.style.display = 'flex';
+        if (sepStats) sepStats.style.display = '';
+        var statParts = [];
+        statParts.push(count + (count === 1 ? ' file' : ' files'));
+        var delta = '';
+        if (ins > 0) delta += '<span class="stat-add">+' + ins + '</span>';
+        if (ins > 0 && del > 0) delta += ' ';
+        if (del > 0) delta += '<span class="stat-del">-' + del + '</span>';
+        if (delta) statParts.push(delta);
+        changesStatsEl.innerHTML = statParts.join(' <span class="changes-header-sep">&middot;</span> ');
         // Keep status bar diff in sync
         var statusDiff = document.getElementById('status-diff');
         if (statusDiff) {
@@ -1477,6 +2126,7 @@ export function buildUiHtml(opts?: {
 
       async function openDiff(path) {
         changesListView.style.display = 'none';
+        changesHeader.style.display = 'none';
         changesDiffView.style.display = 'flex';
         diffFilename.textContent = path;
         diffContent.innerHTML = '<div style="padding:16px;color:#a3a3a3;font-size:12px;font-family:Geist Mono,ui-monospace,monospace;">Loading diff...</div>';
@@ -1521,6 +2171,7 @@ export function buildUiHtml(opts?: {
       document.getElementById('diff-back').addEventListener('click', function() {
         changesDiffView.style.display = 'none';
         changesListView.style.display = 'block';
+        changesHeader.style.display = 'flex';
       });
 
     })();
@@ -1529,6 +2180,18 @@ export function buildUiHtml(opts?: {
     }
 
     // ── Logs panel ──
+    function timeAgo(ts) {
+      var diff = Math.floor((Date.now() - ts) / 1000);
+      if (diff < 5) return 'now';
+      if (diff < 60) return diff + 's ago';
+      var mins = Math.floor(diff / 60);
+      if (mins < 60) return mins + 'm ago';
+      var hrs = Math.floor(mins / 60);
+      if (hrs < 24) return hrs + 'h ago';
+      var days = Math.floor(hrs / 24);
+      return days + 'd ago';
+    }
+
     (function() {
       var logsList = document.getElementById('logs-list');
       var logsCount = document.getElementById('logs-count');
@@ -1566,9 +2229,12 @@ export function buildUiHtml(opts?: {
               var entry = data.entries[i];
               var div = document.createElement('div');
               div.className = 'log-entry' + (entry.level !== 'info' ? ' ' + entry.level : '');
-              var ts = new Date(entry.timestamp);
-              var time = ts.toTimeString().slice(0, 8);
-              div.innerHTML = '<span class="log-time">' + time + '</span>' + escapeHtml(entry.text);
+              var iconSvg = entry.level === 'error'
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+                : entry.level === 'warn'
+                ? '<svg viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+                : '<svg viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+              div.innerHTML = '<span class="log-icon">' + iconSvg + '</span><span class="log-text">' + escapeHtml(entry.text) + '</span><span class="log-time" data-ts="' + entry.timestamp + '">' + timeAgo(entry.timestamp) + '</span>';
               logsList.appendChild(div);
               lastTimestamp = Math.max(lastTimestamp, entry.timestamp);
             }
@@ -1583,9 +2249,20 @@ export function buildUiHtml(opts?: {
         }
       }
 
+      // Update relative timestamps every 30s
+      var timeAgoInterval = null;
+      function updateTimeAgos() {
+        var els = logsList.querySelectorAll('.log-time[data-ts]');
+        for (var i = 0; i < els.length; i++) {
+          els[i].textContent = timeAgo(parseInt(els[i].getAttribute('data-ts'), 10));
+        }
+      }
+
       function startPolling() {
         stopPolling();
         pollInterval = setInterval(fetchLogs, 3000);
+        if (timeAgoInterval) clearInterval(timeAgoInterval);
+        timeAgoInterval = setInterval(updateTimeAgos, 30000);
       }
 
       function stopPolling() {

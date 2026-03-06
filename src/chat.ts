@@ -1,4 +1,9 @@
-import { readFileSync, writeFileSync, appendFileSync, existsSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  appendFileSync,
+  existsSync,
+} from "node:fs";
 import { join } from "node:path";
 import type { IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
@@ -34,7 +39,15 @@ export const DEFAULT_SYSTEM_PROMPT = `
 `;
 
 export interface ChatEvent {
-  type: "text" | "tool_use" | "tool_result" | "error" | "done";
+  type:
+    | "text"
+    | "tool_use"
+    | "tool_result"
+    | "error"
+    | "done"
+    | "task_started"
+    | "task_notification"
+    | "tool_use_summary";
   text?: string;
   name?: string;
   input?: unknown;
@@ -42,6 +55,13 @@ export interface ChatEvent {
   inputTokens?: number;
   outputTokens?: number;
   durationMs?: number;
+  taskId?: string;
+  toolUseId?: string;
+  description?: string;
+  status?: string;
+  summary?: string;
+  taskUsage?: { totalTokens: number; toolUses: number; durationMs: number };
+  parentToolUseId?: string | null;
 }
 
 interface ChatSessionOpts {
@@ -124,9 +144,15 @@ export class ChatSession {
     if (hasOAuthToken && this.opts.env["CLAUDE_TOKEN_EXPIRES"]) {
       const expires = parseInt(this.opts.env["CLAUDE_TOKEN_EXPIRES"], 10);
       const nowSec = Math.floor(Date.now() / 1000);
-      debug("chat", `refreshTokenIfNeeded: expires=${expires}, now=${nowSec}, delta=${expires - nowSec}s`);
+      debug(
+        "chat",
+        `refreshTokenIfNeeded: expires=${expires}, now=${nowSec}, delta=${expires - nowSec}s`,
+      );
       if (nowSec > expires - 300) {
-        debug("chat", "refreshTokenIfNeeded: token expiring soon, refreshing...");
+        debug(
+          "chat",
+          "refreshTokenIfNeeded: token expiring soon, refreshing...",
+        );
         const tokens = await refreshAccessToken(
           this.opts.env["CLAUDE_REFRESH_TOKEN"],
         );
@@ -177,7 +203,10 @@ export class ChatSession {
 
     // Token changed or query not running — (re)create
     if (this.activeQuery) {
-      debug("chat", "ensureQuery: destroying previous query (token changed or query ended)");
+      debug(
+        "chat",
+        "ensureQuery: destroying previous query (token changed or query ended)",
+      );
       this.destroyQuery();
     }
 
@@ -192,21 +221,32 @@ export class ChatSession {
 
     const hasApiKey = !!this.opts.env["ANTHROPIC_API_KEY"];
     const hasOAuthToken = !!this.opts.env["CLAUDE_ACCESS_TOKEN"];
-    debug("chat", `ensureQuery: hasApiKey=${hasApiKey}, hasOAuthToken=${hasOAuthToken}`);
+    debug(
+      "chat",
+      `ensureQuery: hasApiKey=${hasApiKey}, hasOAuthToken=${hasOAuthToken}`,
+    );
     if (hasApiKey) {
       sdkEnv["ANTHROPIC_API_KEY"] = this.opts.env["ANTHROPIC_API_KEY"];
-      debug("chat", `ensureQuery: using ANTHROPIC_API_KEY (${this.opts.env["ANTHROPIC_API_KEY"].slice(0, 12)}...)`);
+      debug(
+        "chat",
+        `ensureQuery: using ANTHROPIC_API_KEY (${this.opts.env["ANTHROPIC_API_KEY"].slice(0, 12)}...)`,
+      );
     } else if (hasOAuthToken) {
-      sdkEnv["CLAUDE_CODE_OAUTH_TOKEN"] =
-        this.opts.env["CLAUDE_ACCESS_TOKEN"];
+      sdkEnv["CLAUDE_CODE_OAUTH_TOKEN"] = this.opts.env["CLAUDE_ACCESS_TOKEN"];
       debug("chat", "ensureQuery: using CLAUDE_CODE_OAUTH_TOKEN (OAuth)");
     } else {
-      debug("chat", "ensureQuery: WARNING — no API key or OAuth token available!");
+      debug(
+        "chat",
+        "ensureQuery: WARNING — no API key or OAuth token available!",
+      );
     }
 
     const systemPrompt = this.opts.systemPrompt ?? DEFAULT_SYSTEM_PROMPT;
 
-    debug("chat", `ensureQuery: creating SDK query (model: ${this.opts.model}, cwd: ${this.opts.projectRoot}, resume: ${this.sessionId ?? "none"})`);
+    debug(
+      "chat",
+      `ensureQuery: creating SDK query (model: ${this.opts.model}, cwd: ${this.opts.projectRoot}, resume: ${this.sessionId ?? "none"})`,
+    );
     this.activeQuery = query({
       prompt: this.messageQueue,
       options: {
@@ -223,7 +263,9 @@ export class ChatSession {
         includePartialMessages: true,
         ...(this.sessionId ? { resume: this.sessionId } : {}),
         ...(this.opts.mcpServers ? { mcpServers: this.opts.mcpServers } : {}),
-        ...(this.opts.disallowedTools ? { disallowedTools: this.opts.disallowedTools } : {}),
+        ...(this.opts.disallowedTools
+          ? { disallowedTools: this.opts.disallowedTools }
+          : {}),
         ...(this.opts.canUseTool ? { canUseTool: this.opts.canUseTool } : {}),
       },
     });
@@ -271,7 +313,10 @@ export class ChatSession {
    */
   private routeSDKMessage(msg: SDKMessage): void {
     const sink = this.currentEventSink;
-    debug("chat", `SDK message: type=${msg.type}${("subtype" in msg) ? ` subtype=${msg.subtype}` : ""}`);
+    debug(
+      "chat",
+      `SDK message: type=${msg.type}${"subtype" in msg ? ` subtype=${msg.subtype}` : ""}`,
+    );
 
     switch (msg.type) {
       case "system": {
@@ -280,6 +325,88 @@ export class ChatSession {
           this.sessionId = msg.session_id;
           debug("chat", `session ID acquired: ${msg.session_id}`);
         }
+        // Task started — sub-agent spawned
+        if (
+          "subtype" in msg &&
+          msg.subtype === "task_started" &&
+          "task_id" in msg
+        ) {
+          const taskMsg = msg as {
+            task_id: string;
+            tool_use_id?: string;
+            description: string;
+          };
+          debug(
+            "chat",
+            `task started: ${taskMsg.task_id} — ${taskMsg.description}`,
+          );
+          this.chatLog({
+            role: "assistant",
+            type: "task_started",
+            text: taskMsg.description,
+            taskId: taskMsg.task_id,
+            toolUseId: taskMsg.tool_use_id,
+          });
+          sink?.({
+            type: "task_started",
+            taskId: taskMsg.task_id,
+            toolUseId: taskMsg.tool_use_id,
+            description: taskMsg.description,
+          });
+        }
+        // Task notification — sub-agent completed/failed/stopped
+        if (
+          "subtype" in msg &&
+          msg.subtype === "task_notification" &&
+          "task_id" in msg
+        ) {
+          const taskMsg = msg as {
+            task_id: string;
+            tool_use_id?: string;
+            status: string;
+            summary: string;
+            usage?: {
+              total_tokens: number;
+              tool_uses: number;
+              duration_ms: number;
+            };
+          };
+          debug(
+            "chat",
+            `task notification: ${taskMsg.task_id} — ${taskMsg.status}`,
+          );
+          this.chatLog({
+            role: "assistant",
+            type: "task_notification",
+            text: taskMsg.summary,
+            taskId: taskMsg.task_id,
+            toolUseId: taskMsg.tool_use_id,
+            status: taskMsg.status,
+          });
+          sink?.({
+            type: "task_notification",
+            taskId: taskMsg.task_id,
+            toolUseId: taskMsg.tool_use_id,
+            status: taskMsg.status,
+            summary: taskMsg.summary,
+            taskUsage: taskMsg.usage
+              ? {
+                  totalTokens: taskMsg.usage.total_tokens,
+                  toolUses: taskMsg.usage.tool_uses,
+                  durationMs: taskMsg.usage.duration_ms,
+                }
+              : undefined,
+          });
+        }
+        break;
+      }
+
+      case "tool_use_summary": {
+        // SDK-generated summary of preceding tool calls
+        if (!sink) break;
+        const summaryMsg = msg as { summary: string };
+        debug("chat", `tool_use_summary: ${summaryMsg.summary}`);
+        sink({ type: "tool_use_summary", summary: summaryMsg.summary });
         break;
       }
 
@@ -293,7 +420,11 @@ export class ChatSession {
           event.delta.type === "text_delta" &&
           "text" in event.delta
         ) {
-          sink({ type: "text", text: event.delta.text });
+          sink({
+            type: "text",
+            text: event.delta.text,
+            parentToolUseId: msg.parent_tool_use_id,
+          });
         }
         break;
       }
@@ -313,13 +444,22 @@ export class ChatSession {
             });
           }
           if (block.type === "tool_use") {
+            const toolUseId = (block as Record<string, unknown>).id as
+              | string
+              | undefined;
             this.chatLog({
               role: "assistant",
               type: "tool_use",
               name: block.name,
               input: block.input,
+              toolUseId,
             });
-            sink?.({ type: "tool_use", name: block.name, input: block.input });
+            sink?.({
+              type: "tool_use",
+              name: block.name,
+              input: block.input,
+              toolUseId,
+            });
           }
         }
         break;
@@ -420,14 +560,20 @@ export class ChatSession {
     message: string,
     onEvent: (event: ChatEvent) => void,
   ): { done: Promise<void>; kill: () => void } {
-    debug("chat", `sendMessage: "${message.slice(0, 100)}${message.length > 100 ? "..." : ""}"`);
+    debug(
+      "chat",
+      `sendMessage: "${message.slice(0, 100)}${message.length > 100 ? "..." : ""}"`,
+    );
     this.chatLog({ role: "user", type: "message", text: message });
 
     // Include recent errors in the message (system prompt is set at query creation)
     let fullMessage = message;
     const recentErrors = this.opts.logBuffer.recentErrors();
     if (recentErrors.length > 0) {
-      debug("chat", `sendMessage: appending ${recentErrors.length} recent errors`);
+      debug(
+        "chat",
+        `sendMessage: appending ${recentErrors.length} recent errors`,
+      );
       fullMessage += `\n\n[Dev server context — recent errors/warnings:\n${recentErrors.join("\n")}\n]`;
     }
 
@@ -496,7 +642,10 @@ export function registerChatRoutes(
 
     const hasApiKey = !!opts.env["ANTHROPIC_API_KEY"];
     const hasOAuthToken = !!opts.env["CLAUDE_ACCESS_TOKEN"];
-    debug("chat", `auth check: hasApiKey=${hasApiKey}, hasOAuthToken=${hasOAuthToken}`);
+    debug(
+      "chat",
+      `auth check: hasApiKey=${hasApiKey}, hasOAuthToken=${hasOAuthToken}`,
+    );
 
     if (!hasApiKey && !hasOAuthToken) {
       debug("chat", "REJECTED: no auth configured");

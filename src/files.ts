@@ -1,10 +1,5 @@
-import {
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-  statSync,
-} from "node:fs";
-import { join, resolve, relative } from "node:path";
+import { readdirSync, readFileSync, writeFileSync, statSync } from "node:fs";
+import { join, resolve, relative, basename } from "node:path";
 import type { IncomingMessage } from "node:http";
 import type { ViteDevServer } from "vite";
 
@@ -173,8 +168,9 @@ export function registerFileRoutes(
       return;
     }
     const files = resolveEditableFiles(resolvedPatterns, opts.projectRoot);
+    const projectName = basename(opts.projectRoot);
     res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ files }));
+    res.end(JSON.stringify({ files, projectName }));
   });
 
   server.middlewares.use("/via/file", async (req, res) => {

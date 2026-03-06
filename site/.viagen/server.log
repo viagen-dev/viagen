@@ -1,8 +1,1 @@
-[2026-03-05T18:17:01.519Z] [INFO] [viagen] Checked out branch: main
-[2026-03-05T18:17:01.531Z] [INFO] Port 5173 is in use, trying another one...
-[2026-03-05T18:17:01.532Z] [INFO] 
-  VITE v7.3.1  ready in 392 ms
-
-[2026-03-05T18:17:01.532Z] [INFO]   ➜  Local:   http://localhost:5174/
-[2026-03-05T18:17:01.532Z] [INFO]   ➜  Network: use --host to expose
-[2026-03-05T18:17:01.532Z] [INFO]   ➜  press h + enter to show help
+[2026-03-06T23:32:17.964Z] [INFO] server restarted.
