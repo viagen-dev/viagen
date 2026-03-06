@@ -533,56 +533,6 @@ fling login</code></pre>
 })</code></pre>
             </section>
 
-            <section>
-                <h2>SSR Frameworks</h2>
-                <p
-                    style="
-                        font-size: 15px;
-                        color: var(--text-muted);
-                        line-height: 1.8;
-                    "
-                >
-                    For plain Vite apps, the chat panel is injected
-                    automatically. SSR frameworks (React Router, Remix,
-                    SvelteKit, etc.) render their own HTML, so add one script
-                    tag to your root layout:
-                </p>
-                <pre
-                    style="margin-top: 12px"
-                ><code>&lt;script src="/via/client.js" defer&gt;&lt;/script&gt;</code></pre>
-                <p
-                    style="
-                        font-size: 15px;
-                        color: var(--text-muted);
-                        line-height: 1.8;
-                        margin-top: 12px;
-                    "
-                >
-                    For React Router, add it to
-                    <code style="font-size: 12px; color: var(--code-text)"
-                        >app/root.tsx</code
-                    >:
-                </p>
-                <!-- prettier-ignore -->
-                <div class="codeblock" style="margin-top: 12px">
-                    <button
-                        onclick="navigator.clipboard.writeText(`export default function Root() {\n  return (\n    &lt;html&gt;\n      &lt;head&gt;\n        &lt;script src=&quot;/via/client.js&quot; defer /&gt;\n        {/* ... */}\n      &lt;/head&gt;\n      {/* ... */}\n    &lt;/html&gt;\n  )\n}`).then(()=>{this.textContent='Copied!';setTimeout(()=>this.textContent='Copy',1500)})"
-                    >
-                        Copy
-                    </button>
-                    <pre><code>export default function Root() {
-  return (
-    &lt;html&gt;
-      &lt;head&gt;
-        &lt;script src="/via/client.js" defer /&gt;
-        {/* ... */}
-      &lt;/head&gt;
-      {/* ... */}
-    &lt;/html&gt;
-  )
-}</code></pre>
-                </div>
-            </section>
 
             <section>
                 <h2>Editable Files</h2>
