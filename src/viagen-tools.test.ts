@@ -4,6 +4,16 @@ vi.mock("viagen-sdk/sandbox", () => ({
   updateTask: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("viagen-sdk", () => ({
+  createViagen: vi.fn().mockReturnValue({
+    tasks: {
+      list: vi.fn().mockResolvedValue([]),
+      get: vi.fn().mockResolvedValue({ id: "task_1", prompt: "test" }),
+      create: vi.fn().mockResolvedValue({ id: "task_2", prompt: "new task" }),
+    },
+  }),
+}));
+
 // Must import after mock is set up
 const { createViagenTools } = await import("./viagen-tools");
 const { updateTask } = await import("viagen-sdk/sandbox");
@@ -20,11 +30,20 @@ describe("createViagenTools", () => {
     expect(tools.instance).toBeDefined();
   });
 
-  it("exposes a viagen_update_task tool", () => {
-    const tools = createViagenTools();
-    // The instance is an McpServer — check that it was created with tools
-    // We can verify by checking the tools array passed to createSdkMcpServer
-    expect(tools).toBeDefined();
+  it("without config, only exposes viagen_update_task", () => {
+    const result = createViagenTools();
+    expect(result).toBeDefined();
+    // No config = no CRUD tools, just update
+  });
+
+  it("with config, exposes all 4 tools", () => {
+    const result = createViagenTools({
+      authToken: "test-token",
+      platformUrl: "https://app.viagen.dev",
+      projectId: "proj_123",
+    });
+    expect(result).toBeDefined();
+    expect(result.name).toBe("viagen");
   });
 });
 
@@ -33,8 +52,6 @@ describe("viagen_update_task tool handler", () => {
     vi.clearAllMocks();
   });
 
-  // We can't easily call the tool handler through the MCP server,
-  // but we can import and test the updateTask function directly
   it("updateTask calls through to viagen-sdk/sandbox", async () => {
     const mockedUpdateTask = vi.mocked(updateTask);
 
@@ -62,6 +79,26 @@ describe("viagen_update_task tool handler", () => {
     expect(mockedUpdateTask).toHaveBeenCalledWith({
       status: "completed",
       result: "Task done",
+    });
+  });
+
+  it("updateTask accepts costUsd, inputTokens, outputTokens", async () => {
+    const mockedUpdateTask = vi.mocked(updateTask);
+
+    await updateTask({
+      status: "completed",
+      result: "Done",
+      inputTokens: 1000,
+      outputTokens: 500,
+      costUsd: 0.05,
+    });
+
+    expect(mockedUpdateTask).toHaveBeenCalledWith({
+      status: "completed",
+      result: "Done",
+      inputTokens: 1000,
+      outputTokens: 500,
+      costUsd: 0.05,
     });
   });
 });

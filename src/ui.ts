@@ -900,16 +900,14 @@ export function buildUiHtml(opts?: {
   <div class="header">
     <div style="display:flex;align-items:center;gap:0;">
       <h1><span class="status-dot" id="status-dot"></span> via <span class="session-timer" id="session-timer"></span></h1>
-      <div style="display:flex;gap:4px;align-items:center;">
-        <button class="btn icon-btn" id="view-preview" title="Preview app" style="display:none;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-        </button>
-        <button class="btn icon-btn" id="view-toggle" title="Toggle view">
-          <svg id="view-toggle-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
-        </button>
-      </div>
     </div>
     <div style="display:flex;gap:4px;align-items:center;">
+      <button class="btn icon-btn" id="view-preview" title="Preview app" style="display:none;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+      </button>
+      <button class="btn icon-btn" id="view-toggle" title="Toggle view">
+        <svg id="view-toggle-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
+      </button>
       <button class="btn icon-btn" id="sound-btn" title="Toggle completion sound">
         <svg id="sound-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></svg>
       </button>

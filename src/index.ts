@@ -19,6 +19,7 @@ import {
   PLAN_SYSTEM_PROMPT,
   PLAN_MODE_DISALLOWED_TOOLS,
   planModeCanUseTool,
+  TASK_TOOLS_PROMPT,
 } from "./viagen-tools";
 import type { McpServerConfig } from "@anthropic-ai/claude-agent-sdk";
 
@@ -225,9 +226,18 @@ export function viagen(options?: ViagenOptions): Plugin {
 
       // MCP tools — created when running inside a viagen sandbox with task context
       let mcpServers: Record<string, McpServerConfig> | undefined;
-      if (env["VIAGEN_CALLBACK_URL"] && env["VIAGEN_AUTH_TOKEN"] && env["VIAGEN_TASK_ID"]) {
+      const hasSandboxContext = !!(env["VIAGEN_CALLBACK_URL"] && env["VIAGEN_AUTH_TOKEN"] && env["VIAGEN_TASK_ID"]);
+      if (hasSandboxContext) {
         debug("server", "creating viagen MCP tools (sandbox mode)");
-        const viagenMcp = createViagenTools();
+        const viagenMcp = createViagenTools(
+          env["VIAGEN_PROJECT_ID"]
+            ? {
+                authToken: env["VIAGEN_AUTH_TOKEN"],
+                platformUrl: env["VIAGEN_PLATFORM_URL"] || "https://app.viagen.dev",
+                projectId: env["VIAGEN_PROJECT_ID"],
+              }
+            : undefined,
+        );
         mcpServers = { [viagenMcp.name]: viagenMcp };
       }
 
@@ -238,6 +248,8 @@ export function viagen(options?: ViagenOptions): Plugin {
       if (isPlanMode) {
         debug("server", "plan mode active — restricting tools");
         systemPrompt = PLAN_SYSTEM_PROMPT;
+      } else if (hasSandboxContext && env["VIAGEN_PROJECT_ID"]) {
+        systemPrompt = (systemPrompt || "") + TASK_TOOLS_PROMPT;
       }
 
       const chatSession = new ChatSession({
