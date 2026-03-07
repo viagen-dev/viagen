@@ -73,16 +73,6 @@ npx viagen sandbox --prompt "build me a landing page"
 npx viagen sandbox stop <sandboxId>
 ```
 
-## Fling
-
-[Fling](https://flingit.io/) lets Claude deploy shareable previews directly from the sandbox. viagen automatically detects your Fling credentials — no extra config needed.
-
-```bash
-# Log in once with the Fling CLI
-fling login
-```
-
-When `~/.fling/token` exists, viagen forwards the token into the sandbox so Claude can run `fling` to publish previews.
 
 ## Plugin Options
 
@@ -99,29 +89,6 @@ viagen({
 })
 ```
 
-### SSR Frameworks (React Router, Remix, SvelteKit, etc.)
-
-For plain Vite apps, the chat panel is injected automatically. SSR frameworks render their own HTML, so you need to add one script tag to your root layout:
-
-```html
-<script src="/via/client.js" defer></script>
-```
-
-For React Router, add it to `app/root.tsx`:
-
-```tsx
-export default function Root() {
-  return (
-    <html>
-      <head>
-        <script src="/via/client.js" defer />
-        {/* ... */}
-      </head>
-      {/* ... */}
-    </html>
-  )
-}
-```
 
 ### Editable Files
 
