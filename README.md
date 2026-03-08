@@ -15,13 +15,13 @@ A Vite dev server plugin and CLI tool that enables you to use Claude Code in a s
 /plugin install viagen@viagen-marketplace
 ```
 
-**Restart Claude Code to load the plugin.**
+**Restart Claude Code, then run:**
 
 ```
 /viagen-install
 ```
 
-The plugin will handle npm installation, vite config updates, and run the setup wizard for you.
+The plugin handles setup for you.
 
 ## Manual Setup
 
@@ -47,9 +47,7 @@ export default defineConfig({
 npx viagen setup
 ```
 
-The setup wizard authenticates with Claude, detects your GitHub and Vercel credentials, and captures your git remote info — all written to your local `.env`. This ensures sandboxes clone the correct repo instead of inferring it at runtime.
-
-You can now run `npm run dev` to start the local dev server. At this point you can launch viagen and chat with Claude to make changes to your app.
+Authenticates with Claude, stores GitHub and Vercel credentials in `.env`. Run `npm run dev` to start — viagen is now ready.
 
 ### Step 3 — Sandbox
 
@@ -57,7 +55,7 @@ You can now run `npm run dev` to start the local dev server. At this point you c
 npx viagen sandbox
 ```
 
-Deploys your dev server to a remote Vercel Sandbox — an isolated VM-like environment where Claude can read, write, and push code.
+Deploys your dev server to a Vercel Sandbox where Claude can read, write, and push code.
 
 ```bash
 # Deploy on a specific branch
@@ -100,11 +98,9 @@ viagen({
 })
 ```
 
-Paths can be files or directories (directories include all files within). The editor appears as a "Files" tab in the chat panel with a collapsible directory tree, syntax highlighting (TypeScript, JavaScript, CSS, HTML, JSON, Markdown), and image preview.
+Appears as a "Files" tab — collapsible tree, syntax highlighting, image preview, and file upload via drag & drop or the paperclip icon.
 
-The default system prompt tells Claude it's embedded in a Vite dev server, that file edits trigger HMR, and how to check server logs. Recent build errors are automatically appended to give Claude context about what went wrong.
-
-To customize the prompt, you can replace it entirely or extend the default:
+The default system prompt tells Claude it's in a Vite dev server, file edits trigger HMR, and recent build errors are appended automatically. Customize or extend:
 
 ```ts
 import { viagen, DEFAULT_SYSTEM_PROMPT } from 'viagen'
@@ -120,7 +116,7 @@ viagen({
 
 ## API
 
-Every viagen endpoint is available as an API. Build your own UI, integrate with CI, or script Claude from the command line.
+Every endpoint is available as an API. Build your own UI, integrate with CI, or script Claude from the terminal.
 
 ```
 POST /via/chat        — send a message, streamed SSE response
@@ -139,7 +135,7 @@ GET  /via/git/branch  — current branch, remote URL, open PR info
 GET  /via/logs        — dev server log entries, optional ?since=<timestamp>
 ```
 
-When `VIAGEN_AUTH_TOKEN` is set (always on in sandboxes), pass the token as a `Bearer` header, a `/t/:token` path segment, or a `?token=` query param.
+When `VIAGEN_AUTH_TOKEN` is set, pass it as a `Bearer` header, `/t/:token` path, or `?token=` param.
 
 ```bash
 # With curl
@@ -151,7 +147,7 @@ curl -X POST http://localhost:5173/via/chat \
 # Or pass the token in the URL path (sets a session cookie)
 open "http://localhost:5173/via/ui/t/$VIAGEN_AUTH_TOKEN"
 
-# ?token= query param also works (fallback for backwards compat)
+# ?token= query param also works
 open "http://localhost:5173/via/ui?token=$VIAGEN_AUTH_TOKEN"
 ```
 

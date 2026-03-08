@@ -349,8 +349,7 @@
                         margin: 0 0 14px;
                     "
                 >
-                    We recommend installing in the project scope, so Claude can
-                    use the skill. You have to <b>Restart Claude Code</b> to
+                    Install in project scope. <b>Restart Claude Code</b>, then
                     run:
                 </p>
                 <div class="install" style="margin-bottom: 8px">
@@ -368,8 +367,7 @@
                         line-height: 1.8;
                     "
                 >
-                    The plugin handles npm installation, vite config updates,
-                    and runs the setup wizard for you.
+                    The plugin handles setup for you.
                 </p>
             </section>
 
@@ -421,28 +419,15 @@ export default defineConfig({
                         line-height: 1.8;
                     "
                 >
-                    The setup wizard authenticates with Claude, detects your
-                    GitHub and Vercel credentials, and captures your git remote
-                    info — all written to your local
+                    Authenticates with Claude, stores GitHub and Vercel
+                    credentials in
                     <code style="font-size: 12px; color: var(--code-text)"
                         >.env</code
-                    >. This ensures sandboxes clone the correct repo instead of
-                    inferring it at runtime.
-                </p>
-                <p
-                    style="
-                        font-size: 15px;
-                        color: var(--text-muted);
-                        line-height: 1.8;
-                        margin-top: 10px;
-                    "
-                >
-                    You can now run
+                    >. Run
                     <code style="font-size: 12px; color: var(--code-text)"
                         >npm run dev</code
                     >
-                    to start the local dev server. At this point you can launch
-                    viagen and chat with Claude to make changes to your app.
+                    to start — viagen is now ready.
                 </p>
             </section>
 
@@ -463,9 +448,8 @@ export default defineConfig({
                         line-height: 1.8;
                     "
                 >
-                    Deploys your dev server to a remote Vercel Sandbox — an
-                    isolated vm-like environment where Claude can read, write,
-                    and push code.
+                    Deploys your dev server to a Vercel Sandbox where Claude
+                    can read, write, and push code.
                 </p>
                 <pre
                     style="margin-top: 16px"
@@ -527,10 +511,9 @@ npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
                         margin-top: 12px;
                     "
                 >
-                    Paths can be files or directories (directories include all
-                    files within). The editor appears as a "Files" tab in the
-                    chat panel with a collapsible directory tree, syntax
-                    highlighting, and image preview.
+                    Appears as a "Files" tab — collapsible tree, syntax
+                    highlighting, image preview, and file upload via drag &amp;
+                    drop or the paperclip icon.
                 </p>
                 <p
                     style="
@@ -540,21 +523,9 @@ npx viagen sandbox stop &lt;sandboxId&gt;</code></pre>
                         margin-top: 12px;
                     "
                 >
-                    The default system prompt tells Claude it's embedded in a
-                    Vite dev server, that file edits trigger HMR, and how to
-                    check server logs. Recent build errors are automatically
-                    appended to give Claude context about what went wrong.
-                </p>
-                <p
-                    style="
-                        font-size: 15px;
-                        color: var(--text-muted);
-                        line-height: 1.8;
-                        margin-top: 12px;
-                    "
-                >
-                    To customize the prompt, replace it entirely or extend the
-                    default:
+                    The default system prompt tells Claude it's in a Vite dev
+                    server, file edits trigger HMR, and recent build errors are
+                    appended automatically. Customize or extend:
                 </p>
                 <div class="codeblock" style="margin-top: 12px">
                     <button
@@ -584,9 +555,8 @@ viagen({
                         line-height: 1.8;
                     "
                 >
-                    Every viagen endpoint is available as an API. Build your own
-                    UI, integrate with CI, or script Claude from the command
-                    line.
+                    Every endpoint is available as an API. Build your own UI,
+                    integrate with CI, or script Claude from the terminal.
                 </p>
                 <pre
                     style="margin-top: 16px"
@@ -616,7 +586,7 @@ GET  /via/logs        — dev server log entries, optional ?since=&lt;timestamp&
                     <code style="font-size: 12px; color: var(--code-text)"
                         >VIAGEN_AUTH_TOKEN</code
                     >
-                    is set (always on in sandboxes), pass the token as a
+                    is set, pass it as a
                     <code style="font-size: 12px; color: var(--code-text)"
                         >Bearer</code
                     >
@@ -624,11 +594,11 @@ GET  /via/logs        — dev server log entries, optional ?since=&lt;timestamp&
                     <code style="font-size: 12px; color: var(--code-text)"
                         >/t/:token</code
                     >
-                    path segment, or
+                    path, or
                     <code style="font-size: 12px; color: var(--code-text)"
                         >?token=</code
                     >
-                    query param.
+                    param.
                 </p>
                 <pre style="margin-top: 16px"><code># With curl
 curl -X POST http://localhost:5173/via/chat \
