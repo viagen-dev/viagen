@@ -5,13 +5,13 @@ type NextFn = (err?: unknown) => void;
 const SCRIPT_TAG = '<script src="/via/client.js" defer></script>';
 const MARKER = "viagen-toggle";
 
+const PREVIEW_SCRIPT_TAG = '<script src="/via/preview.js" defer></script>';
+const PREVIEW_MARKER = "viagen-preview-btn";
+
 /**
- * Connect middleware that intercepts HTML responses and injects the viagen
- * client script. Used as a post-middleware (runs after Vite's internal
- * transformIndexHtml) to support SSR frameworks like React Router that
- * bypass Vite's HTML pipeline.
+ * Shared implementation for script injection into HTML responses.
  */
-export function createInjectionMiddleware() {
+function createScriptInjectionMiddleware(scriptTag: string, marker: string) {
   return function injectMiddleware(
     req: IncomingMessage,
     res: ServerResponse,
@@ -58,7 +58,7 @@ export function createInjectionMiddleware() {
       if (!str) return chunk;
 
       // Already injected by transformIndexHtml or manual script tag
-      if (str.includes(MARKER) || str.includes("/via/client.js")) {
+      if (str.includes(marker) || str.includes(scriptTag)) {
         injected = true;
         return chunk;
       }
@@ -75,7 +75,7 @@ export function createInjectionMiddleware() {
         res.removeHeader("content-length");
       }
 
-      const result = str.slice(0, idx) + SCRIPT_TAG + str.slice(idx);
+      const result = str.slice(0, idx) + scriptTag + str.slice(idx);
       return typeof chunk === "string" ? result : Buffer.from(result, "utf-8");
     }
 
@@ -99,4 +99,22 @@ export function createInjectionMiddleware() {
 
     next();
   };
+}
+
+/**
+ * Connect middleware that intercepts HTML responses and injects the viagen
+ * client script. Used as a post-middleware (runs after Vite's internal
+ * transformIndexHtml) to support SSR frameworks like React Router that
+ * bypass Vite's HTML pipeline.
+ */
+export function createInjectionMiddleware() {
+  return createScriptInjectionMiddleware(SCRIPT_TAG, MARKER);
+}
+
+/**
+ * Connect middleware that injects the viagen preview script into HTML
+ * responses. Only used when VIAGEN_PREVIEW=true.
+ */
+export function createPreviewInjectionMiddleware() {
+  return createScriptInjectionMiddleware(PREVIEW_SCRIPT_TAG, PREVIEW_MARKER);
 }

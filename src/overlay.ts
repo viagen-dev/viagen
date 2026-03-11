@@ -1,3 +1,208 @@
+export function buildPreviewScript(): string {
+  return /* js */ `
+(function() {
+  if (document.getElementById('viagen-preview-btn')) return;
+
+  var btn = document.createElement('button');
+  btn.id = 'viagen-preview-btn';
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span style="vertical-align:middle;">Feedback</span>';
+  btn.style.cssText = 'position:fixed;bottom:16px;left:16px;z-index:99998;padding:8px 14px;background:#ffffff;color:#525252;border:1px solid #e5e5e5;border-radius:20px;font-size:12px;font-weight:500;font-family:Geist,-apple-system,BlinkMacSystemFont,sans-serif;cursor:pointer;letter-spacing:-0.01em;transition:border-color 0.15s,color 0.15s,box-shadow 0.15s;box-shadow:0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04);display:flex;align-items:center;';
+  btn.onmouseenter = function() { btn.style.borderColor = '#d4d4d4'; btn.style.color = '#171717'; btn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.1),0 1px 3px rgba(0,0,0,0.06)'; };
+  btn.onmouseleave = function() { btn.style.borderColor = '#e5e5e5'; btn.style.color = '#525252'; btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08),0 1px 2px rgba(0,0,0,0.04)'; };
+
+  btn.addEventListener('click', function() { openFeedback(); });
+  document.body.appendChild(btn);
+
+  function loadHtml2Canvas() {
+    return new Promise(function(resolve, reject) {
+      if (typeof window.html2canvas !== 'undefined') { resolve(window.html2canvas); return; }
+      var s = document.createElement('script');
+      s.src = 'https://unpkg.com/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.onload = function() { resolve(window.html2canvas); };
+      s.onerror = function() { reject(new Error('Failed to load html2canvas')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function openFeedback() {
+    btn.disabled = true;
+    var origHTML = btn.innerHTML;
+    btn.innerHTML = '<span style="vertical-align:middle;">Capturing\u2026</span>';
+
+    loadHtml2Canvas().then(function(h2c) {
+      return h2c(document.documentElement, {
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        scale: Math.min(window.devicePixelRatio || 1, 2),
+      });
+    }).then(function(canvas) {
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+      showModal(dataUrl);
+    }).catch(function(e) {
+      console.warn('[viagen-preview] Screenshot failed:', e);
+      btn.disabled = false;
+      btn.innerHTML = origHTML;
+      showModal(null);
+    });
+  }
+
+  function showModal(screenshotDataUrl) {
+    var overlay = document.createElement('div');
+    overlay.id = 'viagen-preview-modal';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99999;display:flex;align-items:center;justify-content:center;font-family:Geist,-apple-system,BlinkMacSystemFont,sans-serif;';
+
+    var modal = document.createElement('div');
+    modal.style.cssText = 'background:#fff;border-radius:16px;padding:24px;max-width:560px;width:calc(100% - 32px);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);box-sizing:border-box;';
+
+    /* Header */
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;';
+    var title = document.createElement('h2');
+    title.textContent = 'Send Feedback';
+    title.style.cssText = 'margin:0;font-size:16px;font-weight:600;color:#171717;';
+    var closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.cssText = 'background:none;border:none;font-size:22px;cursor:pointer;color:#a3a3a3;padding:0;line-height:1;transition:color 0.15s;';
+    closeBtn.onmouseenter = function() { closeBtn.style.color = '#171717'; };
+    closeBtn.onmouseleave = function() { closeBtn.style.color = '#a3a3a3'; };
+    closeBtn.onclick = function() { overlay.remove(); };
+    header.appendChild(title);
+    header.appendChild(closeBtn);
+    modal.appendChild(header);
+
+    /* Screenshot preview */
+    if (screenshotDataUrl) {
+      var imgWrap = document.createElement('div');
+      imgWrap.style.cssText = 'margin-bottom:16px;border-radius:8px;overflow:hidden;border:1px solid #e5e5e5;background:#f5f5f5;';
+      var img = document.createElement('img');
+      img.src = screenshotDataUrl;
+      img.style.cssText = 'width:100%;display:block;max-height:220px;object-fit:cover;object-position:top;';
+      imgWrap.appendChild(img);
+      modal.appendChild(imgWrap);
+    } else {
+      var pageRef = document.createElement('div');
+      pageRef.textContent = 'Page: ' + window.location.href;
+      pageRef.style.cssText = 'margin-bottom:16px;padding:10px 12px;background:#f5f5f5;border-radius:8px;font-size:12px;color:#737373;word-break:break-all;';
+      modal.appendChild(pageRef);
+    }
+
+    /* Textarea */
+    var label = document.createElement('label');
+    label.textContent = 'Describe your feedback';
+    label.style.cssText = 'display:block;font-size:13px;font-weight:500;color:#525252;margin-bottom:8px;';
+    modal.appendChild(label);
+
+    var textarea = document.createElement('textarea');
+    textarea.placeholder = 'e.g. The button color looks off, the layout breaks on mobile\u2026';
+    textarea.style.cssText = 'width:100%;min-height:96px;border:1px solid #e5e5e5;border-radius:8px;padding:12px;font-size:14px;font-family:inherit;resize:vertical;box-sizing:border-box;outline:none;transition:border-color 0.15s;color:#171717;';
+    textarea.onfocus = function() { textarea.style.borderColor = '#a3a3a3'; };
+    textarea.onblur = function() { textarea.style.borderColor = '#e5e5e5'; };
+    modal.appendChild(textarea);
+
+    /* Status */
+    var statusEl = document.createElement('div');
+    statusEl.style.cssText = 'margin-top:10px;font-size:13px;color:#737373;display:none;min-height:20px;';
+    modal.appendChild(statusEl);
+
+    /* Buttons */
+    var btnRow = document.createElement('div');
+    btnRow.style.cssText = 'display:flex;gap:8px;margin-top:16px;justify-content:flex-end;';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = 'padding:9px 16px;background:#f5f5f5;color:#525252;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:background 0.15s;';
+    cancelBtn.onmouseenter = function() { cancelBtn.style.background = '#e5e5e5'; };
+    cancelBtn.onmouseleave = function() { cancelBtn.style.background = '#f5f5f5'; };
+    cancelBtn.onclick = function() { overlay.remove(); };
+    var submitBtn = document.createElement('button');
+    submitBtn.textContent = 'Create Task';
+    submitBtn.style.cssText = 'padding:9px 16px;background:#171717;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;font-family:inherit;transition:background 0.15s;';
+    submitBtn.onmouseenter = function() { if (!submitBtn.disabled) submitBtn.style.background = '#404040'; };
+    submitBtn.onmouseleave = function() { if (!submitBtn.disabled) submitBtn.style.background = '#171717'; };
+
+    submitBtn.addEventListener('click', function() {
+      var feedback = textarea.value.trim();
+      if (!feedback) {
+        textarea.style.borderColor = '#ef4444';
+        textarea.focus();
+        return;
+      }
+      submitBtn.disabled = true;
+      cancelBtn.disabled = true;
+      submitBtn.textContent = 'Creating\u2026';
+      submitBtn.style.opacity = '0.7';
+      statusEl.style.display = 'block';
+      statusEl.style.color = '#737373';
+      statusEl.textContent = 'Submitting your feedback\u2026';
+
+      var payload = {
+        prompt: feedback,
+        pageUrl: window.location.href,
+        hasScreenshot: !!screenshotDataUrl,
+      };
+
+      fetch('/via/preview/task', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function(res) {
+        if (!res.ok) {
+          return res.json().catch(function() { return {}; }).then(function(e) {
+            throw new Error(e.error || 'HTTP ' + res.status);
+          });
+        }
+        return res.json();
+      }).then(function() {
+        /* Success state */
+        modal.innerHTML = '';
+        var successDiv = document.createElement('div');
+        successDiv.style.cssText = 'text-align:center;padding:32px 24px;';
+        var check = document.createElement('div');
+        check.style.cssText = 'width:48px;height:48px;background:#22c55e;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:#fff;font-size:22px;font-weight:700;';
+        check.textContent = '\\u2713';
+        var h3 = document.createElement('h3');
+        h3.textContent = 'Task Created!';
+        h3.style.cssText = 'margin:0 0 8px;font-size:16px;font-weight:600;color:#171717;font-family:Geist,-apple-system,BlinkMacSystemFont,sans-serif;';
+        var p = document.createElement('p');
+        p.textContent = 'Your feedback has been submitted successfully.';
+        p.style.cssText = 'margin:0;color:#737373;font-size:14px;font-family:Geist,-apple-system,BlinkMacSystemFont,sans-serif;';
+        successDiv.appendChild(check);
+        successDiv.appendChild(h3);
+        successDiv.appendChild(p);
+        modal.appendChild(successDiv);
+        setTimeout(function() { overlay.remove(); }, 2500);
+      }).catch(function(err) {
+        submitBtn.disabled = false;
+        cancelBtn.disabled = false;
+        submitBtn.textContent = 'Create Task';
+        submitBtn.style.opacity = '1';
+        statusEl.style.color = '#ef4444';
+        statusEl.textContent = 'Error: ' + (err.message || 'Failed to submit. Please try again.');
+      });
+    });
+
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(submitBtn);
+    modal.appendChild(btnRow);
+    overlay.appendChild(modal);
+
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) overlay.remove();
+    });
+    var escHandler = function(e) {
+      if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); }
+    };
+    document.addEventListener('keydown', escHandler);
+
+    document.body.appendChild(overlay);
+    setTimeout(function() { textarea.focus(); }, 50);
+  }
+})();
+`;
+}
+
 export function buildClientScript(opts: {
   position: string;
   panelWidth: number;

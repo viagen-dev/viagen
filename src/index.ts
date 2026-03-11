@@ -5,12 +5,12 @@ import { loadEnv, type Plugin } from "vite";
 import { LogBuffer, wrapLogger } from "./logger";
 import { registerHealthRoutes, type ViteError } from "./health";
 import { registerChatRoutes, ChatSession } from "./chat";
-import { buildClientScript } from "./overlay";
+import { buildClientScript, buildPreviewScript } from "./overlay";
 import { buildUiHtml } from "./ui";
 import { buildIframeHtml } from "./iframe";
 import { createAuthMiddleware } from "./auth";
 import { registerFileRoutes } from "./files";
-import { createInjectionMiddleware } from "./inject";
+import { createInjectionMiddleware, createPreviewInjectionMiddleware } from "./inject";
 import { registerGitRoutes } from "./git";
 import { registerLogRoutes } from "./logs";
 import { setDebug, debug } from "./debug";
@@ -66,6 +66,7 @@ export function viagen(options?: ViagenOptions): Plugin {
   };
 
   let env: Record<string, string>;
+  let previewEnabled = false;
   let projectRoot: string;
   let lastError: ViteError | null = null;
   let promptSent = false;
@@ -82,6 +83,7 @@ export function viagen(options?: ViagenOptions): Plugin {
     },
     configResolved(config) {
       env = loadEnv(config.mode, config.envDir ?? config.root, "");
+      previewEnabled = env["VIAGEN_PREVIEW"] === "true";
       projectRoot = config.root;
 
       // Enable debug logging from option or env var
@@ -116,24 +118,34 @@ export function viagen(options?: ViagenOptions): Plugin {
       );
     },
     transformIndexHtml(_html, ctx) {
-      if (!opts.ui) return [];
+      const tags: Array<{ tag: string; children: string; injectTo: "body" }> = [];
 
-      // In embed mode, only inject if overlay is enabled (for the Fix button)
-      const url = new URL(ctx.originalUrl || ctx.path, "http://localhost");
-      const isEmbed = url.searchParams.has("_viagen_embed");
-      if (isEmbed && !opts.overlay) return [];
+      if (opts.ui) {
+        // In embed mode, only inject if overlay is enabled (for the Fix button)
+        const url = new URL(ctx.originalUrl || ctx.path, "http://localhost");
+        const isEmbed = url.searchParams.has("_viagen_embed");
+        if (!isEmbed || opts.overlay) {
+          tags.push({
+            tag: "script",
+            children: buildClientScript({
+              position: opts.position,
+              panelWidth: opts.panelWidth,
+              overlay: opts.overlay,
+            }),
+            injectTo: "body" as const,
+          });
+        }
+      }
 
-      return [
-        {
+      if (previewEnabled) {
+        tags.push({
           tag: "script",
-          children: buildClientScript({
-            position: opts.position,
-            panelWidth: opts.panelWidth,
-            overlay: opts.overlay,
-          }),
+          children: buildPreviewScript(),
           injectTo: "body" as const,
-        },
-      ];
+        });
+      }
+
+      return tags;
     },
     configureServer(server) {
       debug("server", "configureServer starting");
@@ -214,6 +226,86 @@ export function viagen(options?: ViagenOptions): Plugin {
         res.setHeader("Content-Type", "text/html");
         res.end(buildIframeHtml({ panelWidth: opts.panelWidth }));
       });
+
+      // Preview script + feedback task creation — only when VIAGEN_PREVIEW=true
+      if (previewEnabled) {
+        const previewJs = buildPreviewScript();
+        server.middlewares.use("/via/preview.js", (_req, res) => {
+          res.setHeader("Content-Type", "application/javascript");
+          res.end(previewJs);
+        });
+
+        server.middlewares.use("/via/preview/task", (req, res) => {
+          if (req.method !== "POST") {
+            res.writeHead(405, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Method not allowed" }));
+            return;
+          }
+
+          const callbackUrl = env["VIAGEN_CALLBACK_URL"];
+          const authToken = env["VIAGEN_AUTH_TOKEN"];
+          const projectId = env["VIAGEN_PROJECT_ID"];
+
+          if (!callbackUrl || !authToken || !projectId) {
+            res.writeHead(503, { "Content-Type": "application/json" });
+            res.end(JSON.stringify({ error: "Task creation not configured: missing VIAGEN_CALLBACK_URL, VIAGEN_AUTH_TOKEN, or VIAGEN_PROJECT_ID" }));
+            return;
+          }
+
+          let body = "";
+          req.on("data", (chunk: Buffer) => { body += chunk.toString(); });
+          req.on("end", async () => {
+            try {
+              const data = JSON.parse(body) as { prompt?: string; pageUrl?: string; hasScreenshot?: boolean };
+              const { prompt, pageUrl, hasScreenshot } = data;
+
+              if (!prompt || typeof prompt !== "string") {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "prompt is required" }));
+                return;
+              }
+
+              const parts = [prompt.trim()];
+              if (pageUrl) parts.push(`\nPage URL: ${pageUrl}`);
+              if (hasScreenshot) parts.push("\n[Screenshot was captured at time of submission]");
+              parts.push("\n\n[Submitted via viagen preview feedback]");
+              const fullPrompt = parts.join("");
+
+              const taskId = env["VIAGEN_TASK_ID"];
+              const callResult = await fetch(callbackUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({
+                  ...(taskId ? { taskId } : {}),
+                  action: "create_task",
+                  projectId,
+                  prompt: fullPrompt,
+                  type: "task",
+                }),
+              });
+
+              if (!callResult.ok) {
+                const text = await callResult.text().catch(() => "");
+                res.writeHead(callResult.status, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "Failed to create task", detail: text }));
+                return;
+              }
+
+              const taskData = await callResult.json();
+              res.writeHead(200, { "Content-Type": "application/json" });
+              res.end(JSON.stringify(taskData));
+            } catch (err) {
+              const message = err instanceof Error ? err.message : "Internal error";
+              debug("preview", `preview/task error: ${message}`);
+              res.writeHead(500, { "Content-Type": "application/json" });
+              res.end(JSON.stringify({ error: message }));
+            }
+          });
+        });
+      }
 
       // Health + error routes
       registerHealthRoutes(server, env, {
@@ -314,11 +406,16 @@ export function viagen(options?: ViagenOptions): Plugin {
         });
       }
 
-      // Post-middleware: inject client script into SSR-rendered HTML
+      // Post-middleware: inject scripts into SSR-rendered HTML
       // Runs after Vite's internal transformIndexHtml middleware
-      if (opts.ui) {
+      if (opts.ui || previewEnabled) {
         return () => {
-          server.middlewares.use(createInjectionMiddleware());
+          if (opts.ui) {
+            server.middlewares.use(createInjectionMiddleware());
+          }
+          if (previewEnabled) {
+            server.middlewares.use(createPreviewInjectionMiddleware());
+          }
         };
       }
     },
