@@ -30,7 +30,7 @@ export function buildEditorModule(): { css: string; html: string; js: string } {
     .tree-item {
       display: flex;
       align-items: center;
-      padding: 6px 10px;
+      padding: 4px 8px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 13px;
       color: #525252;
@@ -46,16 +46,16 @@ export function buildEditorModule(): { css: string; html: string; js: string } {
     .tree-item.active { background: #f5f5f5; color: #171717; }
     .tree-icon {
       flex-shrink: 0;
-      margin-right: 3px;
+      margin-right: 2px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
     }
     .tree-icon svg {
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
     }
     .tree-label {
       overflow: hidden;
@@ -358,7 +358,7 @@ export function buildEditorModule(): { css: string; html: string; js: string } {
 
           var childContainer = document.createElement('div');
           childContainer.className = 'tree-group-children';
-          childContainer.style.marginLeft = '28px';
+          childContainer.style.marginLeft = '12px';
           childContainer.style.display = isExpanded ? 'block' : 'none';
           group.appendChild(childContainer);
           container.appendChild(group);
