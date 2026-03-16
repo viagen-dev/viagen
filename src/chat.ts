@@ -37,6 +37,18 @@ export const DEFAULT_SYSTEM_PROMPT = `
   Your job is to help build and modify the app. Files you edit will trigger Vite HMR automatically.
   You can read .viagen/server.log to check recent Vite dev server output (compile errors, HMR updates, warnings).
   Be concise.
+
+  You have agent-browser available for interacting with the running app in a real browser.
+  Use it to visually verify your changes, test interactions, and catch UI issues.
+  Key commands:
+    agent-browser open <url>          — open a page
+    agent-browser snapshot            — get accessibility tree with element refs (@e1, @e2, etc.)
+    agent-browser click @e<N>         — click an element by ref
+    agent-browser fill @e<N> "value"  — fill an input
+    agent-browser screenshot <file>   — capture a screenshot (you can view the image)
+    agent-browser diff snapshot --baseline <file> — compare page state before/after
+    agent-browser close               — close the browser
+  After making changes, consider using agent-browser to verify the result visually.
 `;
 
 export interface ChatEvent {
