@@ -9,7 +9,7 @@ import type { ViagenClient } from "viagen-sdk";
 
 export interface ViagenToolsConfig {
   client: ViagenClient;
-  projectId: string;
+  environmentId: string;
 }
 
 /**
@@ -19,7 +19,7 @@ export interface ViagenToolsConfig {
 export function createViagenTools(
   config: ViagenToolsConfig,
 ): McpSdkServerConfigWithInstance {
-  const { client, projectId } = config;
+  const { client, environmentId } = config;
   const taskId = process.env["VIAGEN_TASK_ID"];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,7 +66,7 @@ export function createViagenTools(
         }
         const internalStatus = args.status === "review" ? "validating" : args.status === "completed" ? "completed" : args.status;
         try {
-          await client.tasks.update(projectId, id, {
+          await client.tasks.update(environmentId, id, {
             ...(internalStatus && { status: internalStatus }),
             ...(args.prUrl && { prUrl: args.prUrl }),
             result: args.result,
@@ -88,7 +88,7 @@ export function createViagenTools(
 
     tool(
       "viagen_list_tasks",
-      "List tasks in the current project. Optionally filter by status.",
+      "List tasks in the current environment. Optionally filter by status.",
       {
         status: z
           .enum(["ready", "running", "validating", "completed", "timed_out"])
@@ -96,7 +96,7 @@ export function createViagenTools(
           .describe("Filter tasks by status."),
       },
       async (args) => {
-        const tasks = await client.tasks.list(projectId, args.status);
+        const tasks = await client.tasks.list(environmentId, args.status);
         return {
           content: [
             {
@@ -115,7 +115,7 @@ export function createViagenTools(
         taskId: z.string().describe("The task ID to retrieve."),
       },
       async (args) => {
-        const task = await client.tasks.get(projectId, args.taskId);
+        const task = await client.tasks.get(environmentId, args.taskId);
         return {
           content: [
             {
@@ -129,7 +129,7 @@ export function createViagenTools(
 
     tool(
       "viagen_create_task",
-      "Create a new task in the current project. Use this to create follow-up work.",
+      "Create a new task in the current environment. Use this to create follow-up work.",
       {
         prompt: z
           .string()
@@ -144,7 +144,7 @@ export function createViagenTools(
           .describe("Task type: 'task' for code changes, 'plan' for implementation plans."),
       },
       async (args) => {
-        const task = await client.tasks.create(projectId, {
+        const task = await client.tasks.create(environmentId, {
           prompt: args.prompt,
           branch: args.branch,
           type: args.type,
@@ -207,10 +207,10 @@ Constraints:
  */
 export const TASK_TOOLS_PROMPT = `
 You have access to viagen platform tools for task management:
-- viagen_list_tasks: List tasks in this project (optionally filter by status)
+- viagen_list_tasks: List tasks in this environment (optionally filter by status)
 - viagen_get_task: Get full details of a specific task
 - viagen_create_task: Create follow-up tasks for work you identify
 - viagen_update_task: Update a task's status ('review' or 'completed'). Accepts an optional taskId — defaults to the current task if one is set.
 
-Use these to understand project context and create follow-up work when appropriate.
+Use these to understand environment context and create follow-up work when appropriate.
 `;

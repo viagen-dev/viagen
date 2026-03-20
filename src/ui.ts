@@ -2012,7 +2012,7 @@ export function buildUiHtml(opts?: {
 
         // Store task context for history rendering
         healthTaskId = data.taskId || null;
-        healthProjectId = data.projectId || null;
+        healthProjectId = data.environmentId || null;
 
         // Load chat history from server (source of truth)
         await loadHistory();
@@ -2106,7 +2106,7 @@ export function buildUiHtml(opts?: {
         if (data.prompt && data.configured && chatLog.length === 0) {
           if (data.taskId) {
             // Task mode: show link instead of raw prompt
-            var taskUrl = 'https://app.viagen.dev/projects/' + data.projectId + '/tasks/' + data.taskId;
+            var taskUrl = 'https://app.viagen.dev/environments/' + data.environmentId + '/tasks/' + data.taskId;
             var div = document.createElement('div');
             div.className = 'msg msg-user';
             div.innerHTML = '<span class="label">Task</span><span class="text">Working on <a href="' + escapeHtml(taskUrl) + '" target="_blank" style="color:#2563eb;text-decoration:underline;">Via Task</a></span>';

@@ -22,7 +22,7 @@ describe("health routes", () => {
     it("returns ok when API key is configured", async () => {
       const res = await fetch(`${server.url}/via/health`);
       expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ status: "ok", configured: true, git: false, vercel: false, branch: null, session: null, prompt: null, taskId: null, projectId: null, missing: ["GITHUB_TOKEN"] });
+      expect(await res.json()).toEqual({ status: "ok", configured: true, git: false, vercel: false, branch: null, session: null, prompt: null, taskId: null, environmentId: null, missing: ["GITHUB_TOKEN"] });
     });
   });
 
@@ -75,7 +75,7 @@ describe("health routes — missing API key", () => {
       session: null,
       prompt: null,
       taskId: null,
-      projectId: null,
+      environmentId: null,
       missing: ["ANTHROPIC_API_KEY", "GITHUB_TOKEN"],
     });
   });

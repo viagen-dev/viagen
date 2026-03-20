@@ -911,14 +911,14 @@ async function sandbox(args: string[], options?: SandboxRunOptions) {
 
 /** Keys that are local-only and should never be synced to the platform. */
 const SYNC_DENY_KEYS = new Set([
-  "VIAGEN_PROJECT_ID",
+  "VIAGEN_ENVIRONMENT_ID",
   "VIAGEN_PLATFORM_URL",
   "INFISICAL_CLIENT_ID",
   "INFISICAL_CLIENT_SECRET",
   "INFISICAL_PROJECT_ID",
 ]);
 
-/** Gather all env vars to sync as project secrets (minus local-only keys). */
+/** Gather all env vars to sync as environment secrets (minus local-only keys). */
 export function gatherSyncSecrets(
   env: Record<string, string>,
 ): Record<string, string> {
@@ -941,51 +941,51 @@ async function sync() {
   console.log("viagen sync");
   console.log("");
 
-  // Check for existing project ID from a previous sync
-  let projectId: string | undefined = env["VIAGEN_PROJECT_ID"];
-  let projectName: string | undefined;
+  // Check for existing environment ID from a previous sync
+  let environmentId: string | undefined = env["VIAGEN_ENVIRONMENT_ID"];
+  let environmentName: string | undefined;
 
-  if (projectId) {
+  if (environmentId) {
     try {
-      const existing = await client.projects.get(projectId);
-      projectName = existing.name;
-      console.log(`Project: ${projectName}`);
+      const existing = await client.environments.get(environmentId);
+      environmentName = existing.name;
+      console.log(`Environment: ${environmentName}`);
     } catch {
-      console.log("Previously synced project not found. Choose a project:");
+      console.log("Previously synced environment not found. Choose an environment:");
       console.log("");
-      projectId = undefined;
+      environmentId = undefined;
     }
   }
 
-  if (!projectId) {
-    const projects = await client.projects.list();
+  if (!environmentId) {
+    const environments = await client.environments.list();
 
-    if (projects.length > 0) {
-      console.log("Your projects:");
+    if (environments.length > 0) {
+      console.log("Your environments:");
       console.log("");
-      for (let i = 0; i < projects.length; i++) {
-        const repo = projects[i].githubRepo ? ` (${projects[i].githubRepo})` : "";
-        console.log(`  ${i + 1}) ${projects[i].name}${repo}`);
+      for (let i = 0; i < environments.length; i++) {
+        const repo = environments[i].githubRepo ? ` (${environments[i].githubRepo})` : "";
+        console.log(`  ${i + 1}) ${environments[i].name}${repo}`);
       }
-      console.log(`  ${projects.length + 1}) Create new project`);
+      console.log(`  ${environments.length + 1}) Create new environment`);
       console.log("");
 
       const choice = await promptUser("Choose: ");
       const idx = parseInt(choice, 10) - 1;
 
-      if (idx >= 0 && idx < projects.length) {
-        projectId = projects[idx].id;
-        projectName = projects[idx].name;
+      if (idx >= 0 && idx < environments.length) {
+        environmentId = environments[idx].id;
+        environmentName = environments[idx].name;
       } else {
-        projectName = await promptUser("Project name: ");
-        if (!projectName) {
+        environmentName = await promptUser("Environment name: ");
+        if (!environmentName) {
           console.log("Cancelled.");
           return;
         }
       }
     } else {
-      projectName = await promptUser("Project name: ");
-      if (!projectName) {
+      environmentName = await promptUser("Environment name: ");
+      if (!environmentName) {
         console.log("Cancelled.");
         return;
       }
@@ -1038,12 +1038,10 @@ async function sync() {
     return;
   }
 
-  // Extract project metadata from env/git, falling back to runtime detection
+  // Extract environment metadata from env/git, falling back to runtime detection
   const gitInfo = getGitInfo(cwd);
   const gitRemote = env["GIT_REMOTE_URL"] || gitInfo?.remoteUrl;
   const githubRepo = gitRemote ? repoNwo(gitRemote) : undefined;
-  const gitBranch = env["GIT_BRANCH"] || gitInfo?.branch;
-
   console.log("");
   console.log("Syncing...");
 
@@ -1051,10 +1049,9 @@ async function sync() {
   const vercelOrgId = env["VERCEL_ORG_ID"];
 
   const syncInput = {
-    ...(projectId ? { id: projectId } : {}),
-    name: projectName!,
+    ...(environmentId ? { id: environmentId } : {}),
+    name: environmentName!,
     ...(githubRepo ? { githubRepo } : {}),
-    ...(gitBranch ? { gitBranch } : {}),
     ...(vercelProjectId ? { vercelProjectId } : {}),
     ...(vercelOrgId ? { vercelOrgId } : {}),
     secrets,
@@ -1062,7 +1059,7 @@ async function sync() {
 
   let result;
   try {
-    result = await client.projects.sync(syncInput);
+    result = await client.environments.sync(syncInput);
   } catch (err: unknown) {
     const logDir = join(cwd, ".viagen");
     const logFile = join(logDir, "sync-error.log");
@@ -1086,13 +1083,13 @@ async function sync() {
     process.exit(1);
   }
 
-  // Save project ID for future syncs
-  if (!env["VIAGEN_PROJECT_ID"]) {
-    writeEnvVars(cwd, { VIAGEN_PROJECT_ID: result.project.id });
+  // Save environment ID for future syncs
+  if (!env["VIAGEN_ENVIRONMENT_ID"]) {
+    writeEnvVars(cwd, { VIAGEN_ENVIRONMENT_ID: result.app.id });
   }
 
   console.log(
-    `Synced "${result.project.name}" — ${result.secrets.stored} secrets stored.`,
+    `Synced "${result.app.name}" — ${result.secrets.stored} secrets stored.`,
   );
   if (result.secrets.failed && result.secrets.failed.length > 0) {
     console.log(`  Failed (${result.secrets.failed.length}): ${result.secrets.failed.join(", ")}`);
@@ -1217,50 +1214,50 @@ async function requireClient(): Promise<ViagenClient> {
   return createViagen({ baseUrl: creds.baseUrl, token: creds.token, orgId: creds.orgId });
 }
 
-async function requireProjectId(client: ViagenClient): Promise<string> {
+async function requireEnvironmentId(client: ViagenClient): Promise<string> {
   const cwd = process.cwd();
   const env = loadDotenv(cwd);
-  let projectId: string | undefined = env["VIAGEN_PROJECT_ID"];
+  let environmentId: string | undefined = env["VIAGEN_ENVIRONMENT_ID"];
 
-  if (projectId) {
+  if (environmentId) {
     try {
-      await client.projects.get(projectId);
-      return projectId;
+      await client.environments.get(environmentId);
+      return environmentId;
     } catch {
-      console.log("Project from .env not found. Choose a project:");
+      console.log("Environment from .env not found. Choose an environment:");
       console.log("");
-      projectId = undefined;
+      environmentId = undefined;
     }
   }
 
-  const projects = await client.projects.list();
+  const environments = await client.environments.list();
 
-  if (projects.length === 0) {
-    console.error("No projects. Create one with `viagen projects create <name>` or `viagen sync`.");
+  if (environments.length === 0) {
+    console.error("No environments found. Create one with `viagen environments create <name>` or `viagen sync`.");
     process.exit(1);
   }
 
-  if (projects.length === 1) {
-    return projects[0].id;
+  if (environments.length === 1) {
+    return environments[0].id;
   }
 
-  console.log("Select a project:");
+  console.log("Select an environment:");
   console.log("");
-  for (let i = 0; i < projects.length; i++) {
-    const repo = projects[i].githubRepo ? ` (${projects[i].githubRepo})` : "";
-    console.log(`  ${i + 1}) ${projects[i].name}${repo}`);
+  for (let i = 0; i < environments.length; i++) {
+    const repo = environments[i].githubRepo ? ` (${environments[i].githubRepo})` : "";
+    console.log(`  ${i + 1}) ${environments[i].name}${repo}`);
   }
   console.log("");
 
   const choice = await promptUser("Choose: ");
   const idx = parseInt(choice, 10) - 1;
 
-  if (idx < 0 || idx >= projects.length) {
+  if (idx < 0 || idx >= environments.length) {
     console.error("Invalid selection.");
     process.exit(1);
   }
 
-  return projects[idx].id;
+  return environments[idx].id;
 }
 
 // ─── teams command ──────────────────────────────────────────────
@@ -1346,65 +1343,65 @@ async function orgs(args: string[]) {
   }
 }
 
-// ─── projects command ────────────────────────────────────────────
+// ─── environments command ────────────────────────────────────────
 
-async function projects(args: string[]) {
+async function environments(args: string[]) {
   const sub = args[0];
 
   if (sub === "create") {
     const name = args.slice(1).join(" ");
     if (!name) {
-      console.error("Usage: viagen projects create <name>");
+      console.error("Usage: viagen environments create <name>");
       process.exit(1);
     }
     const client = await requireClient();
-    const project = await client.projects.create({ name });
-    console.log(`Created project "${project.name}" (${project.id})`);
+    const environment = await client.environments.create({ name });
+    console.log(`Created environment "${environment.name}" (${environment.id})`);
     return;
   }
 
   if (sub === "get") {
     const id = args[1];
     if (!id) {
-      console.error("Usage: viagen projects get <id>");
+      console.error("Usage: viagen environments get <id>");
       process.exit(1);
     }
     const client = await requireClient();
-    const project = await client.projects.get(id);
-    console.log(`  Name:     ${project.name}`);
-    console.log(`  ID:       ${project.id}`);
-    if (project.githubRepo) console.log(`  GitHub:   ${project.githubRepo}`);
-    if (project.templateId) console.log(`  Template: ${project.templateId}`);
-    console.log(`  Created:  ${project.createdAt}`);
+    const environment = await client.environments.get(id);
+    console.log(`  Name:     ${environment.name}`);
+    console.log(`  ID:       ${environment.id}`);
+    if (environment.githubRepo) console.log(`  GitHub:   ${environment.githubRepo}`);
+    if (environment.templateId) console.log(`  Template: ${environment.templateId}`);
+    console.log(`  Created:  ${environment.createdAt}`);
     return;
   }
 
   if (sub === "delete") {
     const id = args[1];
     if (!id) {
-      console.error("Usage: viagen projects delete <id>");
+      console.error("Usage: viagen environments delete <id>");
       process.exit(1);
     }
-    const answer = await promptUser(`Delete project ${id}? [y/n]: `);
+    const answer = await promptUser(`Delete environment ${id}? [y/n]: `);
     if (answer !== "y" && answer !== "yes") return;
     const client = await requireClient();
-    await client.projects.delete(id);
-    console.log("Project deleted.");
+    await client.environments.delete(id);
+    console.log("Environment deleted.");
     return;
   }
 
-  // Default: list projects
+  // Default: list environments
   const client = await requireClient();
-  const list = (await client.projects.list()) ?? [];
+  const list = (await client.environments.list()) ?? [];
 
   if (list.length === 0) {
-    console.log("No projects. Create one with `viagen projects create <name>`.");
+    console.log("No environments. Create one with `viagen environments create <name>`.");
     return;
   }
 
-  for (const p of list) {
-    const repo = p.githubRepo ? ` (${p.githubRepo})` : "";
-    console.log(`  ${p.name}${repo}  ${p.id}`);
+  for (const e of list) {
+    const repo = e.githubRepo ? ` (${e.githubRepo})` : "";
+    console.log(`  ${e.name}${repo}  ${e.id}`);
   }
 }
 
@@ -1423,10 +1420,10 @@ function formatTaskStatus(status: string): string {
 
 async function tasksList(args: string[]) {
   const client = await requireClient();
-  const projectId = await requireProjectId(client);
+  const environmentId = await requireEnvironmentId(client);
   const status = parseFlag(args, "--status") || parseFlag(args, "-s");
 
-  const list = await client.tasks.list(projectId, status);
+  const list = await client.tasks.list(environmentId, status);
 
   if (list.length === 0) {
     console.log(
@@ -1484,13 +1481,13 @@ async function tasksCreate(args: string[]) {
   }
 
   const client = await requireClient();
-  const projectId = await requireProjectId(client);
+  const environmentId = await requireEnvironmentId(client);
 
   const input: { prompt: string; branch?: string; type?: string } = { prompt };
   if (branch) input.branch = branch;
   if (type) input.type = type;
 
-  const task = await client.tasks.create(projectId, input);
+  const task = await client.tasks.create(environmentId, input);
 
   console.log(`Task created: ${task.id}`);
   console.log(`  Prompt: ${task.prompt}`);
@@ -1509,8 +1506,8 @@ async function tasksGet(args: string[]) {
   }
 
   const client = await requireClient();
-  const projectId = await requireProjectId(client);
-  const task = await client.tasks.get(projectId, taskId);
+  const environmentId = await requireEnvironmentId(client);
+  const task = await client.tasks.get(environmentId, taskId);
 
   console.log(`  ID:         ${task.id}`);
   console.log(`  Type:       ${task.type}`);
@@ -1544,15 +1541,15 @@ async function tasksRun(args: string[]) {
   }
 
   const client = await requireClient();
-  const projectId = await requireProjectId(client);
-  const task = await client.tasks.get(projectId, taskId);
+  const environmentId = await requireEnvironmentId(client);
+  const task = await client.tasks.get(environmentId, taskId);
 
   console.log(`Running task: ${task.id}`);
   console.log(`  Prompt: ${task.prompt}`);
   console.log(`  Branch: ${task.branch}`);
   console.log("");
 
-  await client.tasks.update(projectId, taskId, { status: "running" });
+  await client.tasks.update(environmentId, taskId, { status: "running" });
 
   const sandboxArgs: string[] = [];
   if (task.branch) {
@@ -1569,12 +1566,12 @@ async function tasksRun(args: string[]) {
       promptOverride: task.prompt,
       extraEnvVars: {
         VIAGEN_TASK_ID: task.id,
-        VIAGEN_PROJECT_ID: projectId,
+        VIAGEN_ENVIRONMENT_ID: environmentId,
       },
     });
   } catch (err) {
     console.error(`Sandbox deploy failed: ${err instanceof Error ? err.message : String(err)}`);
-    await client.tasks.update(projectId, taskId, { status: "ready" }).catch(() => {});
+    await client.tasks.update(environmentId, taskId, { status: "ready" }).catch(() => {});
     process.exit(1);
   }
 }
@@ -1617,11 +1614,11 @@ function help() {
   console.log("  orgs                           List your organizations");
   console.log("  orgs create <name>             Create a new organization");
   console.log("  orgs invite <email>            Invite a member to the org");
-  console.log("  projects                       List projects in current org");
-  console.log("  projects create <name>         Create a new project");
-  console.log("  projects get <id>              Show project details");
-  console.log("  projects delete <id>           Delete a project");
-  console.log("  tasks                          List tasks for current project");
+  console.log("  environments                   List environments in current org");
+  console.log("  environments create <name>     Create a new environment");
+  console.log("  environments get <id>          Show environment details");
+  console.log("  environments delete <id>       Delete an environment");
+  console.log("  tasks                          List tasks for current environment");
   console.log("  tasks create <prompt>          Create a new task");
   console.log("  tasks get <id>                 Show task details");
   console.log("  tasks run <id>                 Run a task in a sandbox");
@@ -1704,8 +1701,8 @@ async function main() {
     await teams();
   } else if (command === "orgs") {
     await orgs(args.slice(1));
-  } else if (command === "projects") {
-    await projects(args.slice(1));
+  } else if (command === "environments") {
+    await environments(args.slice(1));
   } else if (command === "tasks") {
     await tasks(args.slice(1));
   } else if (command === "dev") {

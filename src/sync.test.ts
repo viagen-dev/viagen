@@ -24,9 +24,9 @@ describe("gatherSyncSecrets", () => {
     expect(gatherSyncSecrets(env)).toEqual({ GITHUB_TOKEN: "ghp_abc" });
   });
 
-  it("excludes VIAGEN_PROJECT_ID (local-only)", () => {
+  it("excludes VIAGEN_ENVIRONMENT_ID (local-only)", () => {
     const env = {
-      VIAGEN_PROJECT_ID: "proj_123",
+      VIAGEN_ENVIRONMENT_ID: "proj_123",
       GITHUB_TOKEN: "ghp_abc",
     };
     expect(gatherSyncSecrets(env)).toEqual({ GITHUB_TOKEN: "ghp_abc" });
@@ -52,7 +52,7 @@ describe("gatherSyncSecrets", () => {
 
   it("excludes all deny-listed keys together", () => {
     const env = {
-      VIAGEN_PROJECT_ID: "proj_123",
+      VIAGEN_ENVIRONMENT_ID: "proj_123",
       VIAGEN_PLATFORM_URL: "https://platform.viagen.dev",
       INFISICAL_CLIENT_ID: "inf-id",
       INFISICAL_CLIENT_SECRET: "inf-secret",

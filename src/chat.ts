@@ -622,7 +622,7 @@ export class ChatSession {
 export function registerChatRoutes(
   server: ViteDevServer,
   session: ChatSession,
-  opts: { env: Record<string, string>; viagenClient?: ViagenClient; projectId?: string },
+  opts: { env: Record<string, string>; viagenClient?: ViagenClient; environmentId?: string },
 ) {
   server.middlewares.use("/via/chat/history", (req, res) => {
     const url = new URL(req.url || "/", "http://localhost");
@@ -724,10 +724,10 @@ export function registerChatRoutes(
           res.end();
         }
         // Report usage to platform
-        if (opts.viagenClient && opts.projectId) {
+        if (opts.viagenClient && opts.environmentId) {
           const taskId = opts.env["VIAGEN_TASK_ID"];
           if (taskId && (event.inputTokens || event.outputTokens)) {
-            opts.viagenClient.tasks.update(opts.projectId, taskId, {
+            opts.viagenClient.tasks.update(opts.environmentId, taskId, {
               ...(event.inputTokens != null && { inputTokens: event.inputTokens }),
               ...(event.outputTokens != null && { outputTokens: event.outputTokens }),
             }).catch((err) => {

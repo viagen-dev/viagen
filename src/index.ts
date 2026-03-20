@@ -202,7 +202,7 @@ export function viagen(options?: ViagenOptions): Plugin {
       // Platform SDK client — used for task CRUD and usage reporting
       const platformToken = env["VIAGEN_USER_TOKEN"] || env["VIAGEN_AUTH_TOKEN"];
       const platformUrl = env["VIAGEN_PLATFORM_URL"] || "https://app.viagen.dev";
-      const projectId = env["VIAGEN_PROJECT_ID"];
+      const environmentId = env["VIAGEN_ENVIRONMENT_ID"];
       let viagenClient: ViagenClient | null = null;
       if (platformToken) {
         viagenClient = createViagen({ token: platformToken, baseUrl: platformUrl });
@@ -254,9 +254,9 @@ export function viagen(options?: ViagenOptions): Plugin {
             return;
           }
 
-          if (!viagenClient || !projectId) {
+          if (!viagenClient || !environmentId) {
             res.writeHead(503, { "Content-Type": "application/json" });
-            res.end(JSON.stringify({ error: "Task creation not configured: missing platform credentials or VIAGEN_PROJECT_ID" }));
+            res.end(JSON.stringify({ error: "Task creation not configured: missing platform credentials or VIAGEN_ENVIRONMENT_ID" }));
             return;
           }
 
@@ -279,7 +279,7 @@ export function viagen(options?: ViagenOptions): Plugin {
               parts.push("\n\n[Submitted via viagen preview feedback]");
               const fullPrompt = parts.join("");
 
-              const task = await viagenClient!.tasks.create(projectId!, { prompt: fullPrompt, type: "task" });
+              const task = await viagenClient!.tasks.create(environmentId!, { prompt: fullPrompt, type: "task" });
 
               // Upload screenshot as attachment if provided
               if (screenshot && task.id) {
@@ -290,7 +290,7 @@ export function viagen(options?: ViagenOptions): Plugin {
                   const binary = Buffer.from(b64, "base64");
                   const blob = new Blob([binary], { type: mime });
                   const ext = mime === "image/png" ? "png" : "jpeg";
-                  await viagenClient!.tasks.addAttachment(projectId!, task.id, blob, `screenshot.${ext}`);
+                  await viagenClient!.tasks.addAttachment(environmentId!, task.id, blob, `screenshot.${ext}`);
                   debug("preview", `screenshot attached to task ${task.id}`);
                 } catch (attachErr) {
                   debug("preview", `screenshot attachment failed (non-fatal): ${attachErr}`);
@@ -318,14 +318,14 @@ export function viagen(options?: ViagenOptions): Plugin {
       const resolvedModel = env["VIAGEN_MODEL"] || opts.model;
       debug("server", `creating ChatSession (model: ${resolvedModel})`);
 
-      // MCP tools — created when platform client and project ID are available
+      // MCP tools — created when platform client and environment ID are available
       let mcpServers: Record<string, McpServerConfig> | undefined;
-      const hasPlatformContext = !!(viagenClient && projectId);
+      const hasPlatformContext = !!(viagenClient && environmentId);
       if (hasPlatformContext) {
         debug("server", "creating viagen MCP tools (platform connected)");
         const viagenMcp = createViagenTools({
           client: viagenClient!,
-          projectId: projectId!,
+          environmentId: environmentId!,
         });
         mcpServers = { [viagenMcp.name]: viagenMcp };
       }
@@ -361,7 +361,7 @@ export function viagen(options?: ViagenOptions): Plugin {
       registerChatRoutes(server, chatSession, {
         env,
         viagenClient: viagenClient ?? undefined,
-        projectId,
+        environmentId,
       });
 
       // File editor routes
@@ -390,8 +390,8 @@ export function viagen(options?: ViagenOptions): Plugin {
             logBuffer.push("info", `[viagen] Prompt completed`);
             // Report usage to platform
             const currentTaskId = env["VIAGEN_TASK_ID"];
-            if (viagenClient && projectId && currentTaskId && (event.inputTokens || event.outputTokens)) {
-              viagenClient.tasks.update(projectId, currentTaskId, {
+            if (viagenClient && environmentId && currentTaskId && (event.inputTokens || event.outputTokens)) {
+              viagenClient.tasks.update(environmentId, currentTaskId, {
                 ...(event.inputTokens != null && { inputTokens: event.inputTokens }),
                 ...(event.outputTokens != null && { outputTokens: event.outputTokens }),
               }).catch((err) => {
