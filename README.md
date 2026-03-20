@@ -86,9 +86,28 @@ viagen({
   sandboxFiles: [...],       // copy files manually into sandbox
   systemPrompt: '...',       // custom system prompt (see below)
   editable: ['src','conf'],  // files/dirs editable in the UI
+  mcpServers: { ... },       // additional MCP servers for Claude
 })
 ```
 
+
+### Custom MCP Servers
+
+Pass additional [MCP server](https://modelcontextprotocol.io) configurations to give Claude access to custom tools:
+
+```ts
+viagen({
+  mcpServers: {
+    'my-db': {
+      command: 'npx',
+      args: ['-y', '@my-org/db-mcp-server'],
+      env: { DATABASE_URL: process.env.DATABASE_URL },
+    },
+  },
+})
+```
+
+These are merged with viagen's built-in platform tools (when connected). User-provided servers take precedence if names collide.
 
 ### Editable Files
 

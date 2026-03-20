@@ -49,6 +49,8 @@ export interface ViagenOptions {
    * @example ['src/components', '.env', 'vite.config.ts']
    */
   editable?: string[];
+  /** Additional MCP servers to make available to Claude. Merged with built-in viagen tools. */
+  mcpServers?: Record<string, McpServerConfig>;
   /** Enable verbose debug logging. Also enabled by VIAGEN_DEBUG=1 in .env. */
   debug?: boolean;
 }
@@ -328,6 +330,12 @@ export function viagen(options?: ViagenOptions): Plugin {
           environmentId: environmentId!,
         });
         mcpServers = { [viagenMcp.name]: viagenMcp };
+      }
+
+      // Merge user-provided MCP servers
+      if (options?.mcpServers) {
+        mcpServers = { ...mcpServers, ...options.mcpServers };
+        debug("server", `merged ${Object.keys(options.mcpServers).length} user MCP server(s)`);
       }
 
       // Plan mode restrictions
